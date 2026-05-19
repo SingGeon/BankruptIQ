@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BankruptIQ — Analiză Risc Faliment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="logo">
+    <span class="logo-icon">⚡</span>
+    Bankrupt<span>IQ</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span id="modelBadge" class="header-badge">⚠ Model neantrenat</span>
+    <a href="/docs" target="_blank" class="btn btn-secondary btn-sm">📖 API Docs</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Stats ────────────────────────────────────────────── -->
+  <div class="stats-grid">
+    <div class="stat-card accent">
+      <span class="label">Total Companii</span>
+      <span class="value" id="statTotal">—</span>
+    </div>
+    <div class="stat-card danger">
+      <span class="label">Risc Mare</span>
+      <span class="value" id="statHigh">—</span>
+    </div>
+    <div class="stat-card warning">
+      <span class="label">Risc Mediu</span>
+      <span class="value" id="statMedium">—</span>
+    </div>
+    <div class="stat-card success">
+      <span class="label">Risc Mic</span>
+      <span class="value" id="statLow">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">Scor Mediu</span>
+      <span class="value" id="statAvg">—</span>
+    </div>
+  </div>
+
+  <!-- ── Charts ───────────────────────────────────────────── -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>📊 Distribuție Risc</h3>
+      <div class="chart-container">
+        <canvas id="riskPieChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>🔬 Importanța Indicatorilor</h3>
+      <div class="chart-container">
+        <canvas id="featureBarChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>📈 Evoluție Scor Risc (top 6 companii)</h3>
+      <div class="chart-container">
+        <canvas id="trendLineChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Import & Train ────────────────────────────────────── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+
+    <!-- Import CSV -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">📂</span> Import Date CSV</div>
+      </div>
+      <div class="upload-zone" id="uploadZone">
+        <div class="icon">☁️</div>
+        <p><strong>Trage & plasează</strong> fișierul CSV sau click pentru a selecta</p>
+        <p style="margin-top:6px;font-size:.8rem">
+          Coloane necesare: company_name, year, current_ratio, quick_ratio,
+          debt_ratio, debt_to_equity, net_profit_margin, return_on_assets,
+          return_on_equity, asset_turnover, working_capital_ratio, interest_coverage
+          <br><em>Opțional: is_bankrupt (0/1) pentru antrenare</em>
+        </p>
+      </div>
+      <input type="file" id="fileInput" accept=".csv" />
+      <div class="upload-actions">
+        <span id="fileName" style="color:var(--text-muted);font-size:.85rem"></span>
+        <button class="btn btn-primary" id="uploadBtn" onclick="uploadCSV()" disabled>
+          ⬆ Importă CSV
+        </button>
+        <a href="/static/../data/sample_data.csv" download class="btn btn-secondary btn-sm">
+          ⬇ Exemplu CSV
+        </a>
+      </div>
+    </div>
+
+    <!-- Train Model -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">🧠</span> Model Machine Learning</div>
+      </div>
+      <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">
+        Algoritmul <strong>Random Forest</strong> (200 arbori) antrenat pe indicatorii financiari
+        din baza de date. Necesită cel puțin 20 companii cu coloana <code>is_bankrupt</code>.
+      </p>
+      <button class="btn btn-primary" id="trainBtn" onclick="trainModel()">
+        🧠 Antrenează Model
+      </button>
+      <button class="btn btn-secondary" style="margin-left:.5rem" onclick="predictAllCompanies()">
+        🔮 Re-scorează Toate
+      </button>
+
+      <!-- Metrics -->
+      <div id="metricsPanel" style="display:none;margin-top:1.25rem">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem">
+          <div class="detail-item">
+            <div class="key">Acuratețe</div>
+            <div class="val" id="metAccuracy">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="key">Precizie</div>
+            <div class="val" id="metPrecision">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="key">Recall</div>
+            <div class="val" id="metRecall">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="key">F1-Score</div>
+            <div class="val" id="metF1">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="key">AUC-ROC</div>
+            <div class="val" id="metAUC">—</div>
+          </div>
+          <div class="detail-item">
+            <div class="key">Eșantioane</div>
+            <div class="val" id="metSamples">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Companies Table ───────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🏢</span> Companii</div>
+      <div class="toolbar">
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Caută companie..."
+          oninput="onSearch(this.value)"
+        />
+        <button class="btn btn-secondary btn-sm" onclick="loadCompanies()">↺ Reîncarcă</button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table id="companiesTable">
+        <thead>
+          <tr>
+            <th>Companie</th>
+            <th>Risc</th>
+            <th>Scor (0–100)</th>
+            <th>Faliment?</th>
+            <th>Rata Datorii</th>
+            <th>Lichiditate</th>
+            <th>Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="7"><div class="empty-state"><div class="icon">⏳</div><p>Se încarcă...</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Detail Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📋 Detalii Companie</h2>
+      <button class="modal-close" onclick="closeDetailModal()">×</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- ── Toast Container ───────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
