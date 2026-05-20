@@ -12,6 +12,19 @@
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script>
+    // Golire completă cache Babel la fiecare încărcare
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(k => {
+        if (k.startsWith('babel-') || k.startsWith('__babel') || k.includes('jsx')) {
+          localStorage.removeItem(k);
+        }
+      });
+      // Forțează re-transformare Babel
+      if (window.Babel) window.Babel.disableScriptTags = false;
+    } catch(e) {}
+  </script>
 
   <style>
     /* ───────────────── Reset & base ───────────────── */
@@ -2369,15 +2382,15 @@
   </script>
 
   <script type="text/babel" src="tweaks-panel.jsx"></script>
-  <script type="text/babel" src="src/theme.jsx"></script>
-  <script type="text/babel" src="src/data.jsx"></script>
-  <script type="text/babel" src="src/charts.jsx"></script>
-  <script type="text/babel" src="src/loading.jsx"></script>
-  <script type="text/babel" src="src/hero.jsx"></script>
-  <script type="text/babel" src="src/globe.jsx"></script>
-  <script type="text/babel" src="src/stats.jsx"></script>
-  <script type="text/babel" src="src/profile.jsx"></script>
-  <script type="text/babel" src="src/compare.jsx"></script>
-  <script type="text/babel" src="src/app.jsx"></script>
+  <script type="text/babel" src="src/theme.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/data.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/charts.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/loading.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/hero.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/globe.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/stats.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/profile.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/compare.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/app.jsx?v=1779313196"></script>
 </body>
 </html>

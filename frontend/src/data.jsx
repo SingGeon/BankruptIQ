@@ -423,8 +423,29 @@
     return "var(--risk-low)";
   };
 
+  /* ── 100 companii aleatoare pentru glob (stratificate pe risc) ── */
+
+  function sampleGlobe(all, n) {
+    if (all.length <= n) return [...all];
+    // Împarte pe clase de risc și ia proporțional
+    const high   = all.filter(c => c.riskClass === "high");
+    const medium = all.filter(c => c.riskClass === "medium");
+    const low    = all.filter(c => c.riskClass === "low");
+    const shuffle = arr => arr.slice().sort(() => Math.random() - 0.5);
+    const nHigh   = Math.round(n * (high.length   / all.length));
+    const nMedium = Math.round(n * (medium.length / all.length));
+    const nLow    = n - nHigh - nMedium;
+    return [
+      ...shuffle(high).slice(0, nHigh),
+      ...shuffle(medium).slice(0, nMedium),
+      ...shuffle(low).slice(0, Math.max(0, nLow)),
+    ].sort(() => Math.random() - 0.5); // amestecă finalul
+  }
+
+  const GLOBE_COMPANIES = sampleGlobe(COMPANIES, 100);
+
   /* ── Export ───────────────────────────────────────────────────── */
 
-  window.BIQ_DATA = { COMPANIES, SECTORS, FLAG_LABELS, ALERTS, BANKRUPTCY_CASES, getKPIs, getSectorStats };
-  console.log(`[BIQ] ${COMPANIES.length} companii încărcate, ${ALERTS.length} alerte`);
+  window.BIQ_DATA = { COMPANIES, GLOBE_COMPANIES, SECTORS, FLAG_LABELS, ALERTS, BANKRUPTCY_CASES, getKPIs, getSectorStats };
+  console.log(`[BIQ] ${COMPANIES.length} companii încărcate · ${GLOBE_COMPANIES.length} pe glob · ${ALERTS.length} alerte`);
 })();

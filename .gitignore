@@ -11,3 +11,9 @@ build/
 .vscode/
 info.txt
 info100.txt
+
+# Date MF descărcate (regenerabile cu fetch_mf.py --year YYYY)
+data/mf_raw_*.txt
+data/mf_raw_*.zip
+data/mf_*.csv
+data/onrc_names.csv

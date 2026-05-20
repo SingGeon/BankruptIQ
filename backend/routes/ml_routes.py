@@ -55,7 +55,7 @@ async def predict_all_companies():
     """Re-calculează scorul de risc pentru toate companiile și regenerează alertele."""
     db = get_db()
     cursor = db["companies"].find({}, {"indicators": 1, "company_name": 1})
-    docs = await cursor.to_list(length=10_000)
+    docs = await cursor.to_list(length=100_000)
 
     if not docs:
         return {"updated": 0}

@@ -12,14 +12,27 @@ function StatsPage({ onSelectCompany }) {
   const [macroLoading, setMacroLoading] = useStateS(false);
   const [macroLastUpdate, setMacroLastUpdate] = useStateS(null);
 
+  const [bnrLive, setBnrLive] = useStateS(null);
+
   function fetchMacro() {
-    setMacroLoading(true);
+    setMacroLoading(false);
     fetch("/api/macro/")
       .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        setMacroData(data);
-        setMacroLastUpdate(new Date());
+      .then(data => { setMacroData(data); setMacroLastUpdate(new Date()); })
+      .catch(() => {});
+  }
+
+  function refreshMacro() {
+    setMacroLoading(true);
+    // Mai întâi refresh date (preia EUR/RON live de la BNR)
+    fetch("/api/macro/refresh", { method: "POST" })
+      .then(r => r.ok ? r.json() : null)
+      .then(result => {
+        if (result?.eur_ron_live) setBnrLive(result.eur_ron_live);
+        // Apoi preia datele actualizate
+        return fetch("/api/macro/").then(r => r.ok ? r.json() : []);
       })
+      .then(data => { setMacroData(data); setMacroLastUpdate(new Date()); })
       .catch(() => {})
       .finally(() => setMacroLoading(false));
   }
@@ -72,7 +85,7 @@ function StatsPage({ onSelectCompany }) {
           Situația <span className="stats-accent">macro</span> și impactul asupra portofoliului.
         </h1>
         <p className="stats-page-sub">
-          Indicatori macro BNR/INSSE, trend falimente UNPIR 2023-2026, recovery rates pe sectoare și expunere pe portofoliu. Actualizat mai 2026.
+          Indicatori macro BNR/INSSE · EUR/RON live de la BNR · trend falimente UNPIR · apasă <strong>Actualizează</strong> pentru date în timp real.
         </p>
       </div>
 
@@ -87,7 +100,7 @@ function StatsPage({ onSelectCompany }) {
               </span>
             )}
             <button
-              onClick={fetchMacro}
+              onClick={refreshMacro}
               disabled={macroLoading}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
@@ -113,10 +126,25 @@ function StatsPage({ onSelectCompany }) {
           </div>
         </div>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        {bnrLive && (
+          <div style={{ marginBottom: 12, padding: "6px 12px", background: "color-mix(in oklab, var(--risk-low) 12%, transparent)",
+            border: "1px solid var(--risk-low)", borderRadius: 6, fontFamily: "var(--font-mono)", fontSize: 11,
+            color: "var(--risk-low)", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--risk-low)",
+              boxShadow: "0 0 6px var(--risk-low)", display: "inline-block" }} />
+            EUR/RON LIVE · BNR · {bnrLive.toFixed(4)} RON
+          </div>
+        )}
         <div className="macro-grid">
           {macro.map((m, i) => (
             <div key={i} className="macro-cell">
-              <div className="macro-lbl">{m.lbl}</div>
+              <div className="macro-lbl">
+                {m.lbl}
+                {m.lbl.includes("EUR") && bnrLive && (
+                  <span style={{ marginLeft: 6, fontSize: 9, padding: "1px 5px", borderRadius: 4,
+                    background: "var(--risk-low)", color: "#000", fontWeight: 700 }}>LIVE</span>
+                )}
+              </div>
               <div className="macro-row">
                 <div className="macro-val">{m.val}</div>
                 <div className={"macro-delta " + ((m.delta > 0) !== !!m.down ? "up" : "down")}>

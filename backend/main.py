@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from backend.database import close_db, get_db
@@ -73,7 +73,22 @@ async def serve_frontend():
 
 @app.get("/dashboard", include_in_schema=False)
 async def serve_dashboard():
-    return FileResponse(os.path.join(FRONTEND_DIR, "dashboard.html"))
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "dashboard.html"),
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
+
+
+@app.get("/src/{filename:path}", include_in_schema=False)
+async def serve_jsx(filename: str):
+    """Servește fișierele JSX/JS fără cache."""
+    path = os.path.join(FRONTEND_DIR, "src", filename.split("?")[0])
+    if not os.path.exists(path):
+        return Response(status_code=404)
+    return FileResponse(
+        path,
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
 
 
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")

@@ -3,6 +3,120 @@
 const { useState, useMemo, useEffect } = React;
 const { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakToggle, TweakSelect } = window;
 
+// ── Radar chart circular pentru indicatori financiari ──────────────────────
+function RadarIndicators({ companies }) {
+  const AXES = [
+    { key: "currentRatio",   label: "Lichiditate",   min: 0,    max: 4 },
+    { key: "leverage",       label: "Levier",        min: 0,    max: 8,  invert: true },
+    { key: "roe",            label: "ROE",           min: -30,  max: 50 },
+    { key: "altmanZ",        label: "Altman Z'",     min: 0,    max: 5 },
+    { key: "prob12",         label: "P(Faliment)",   min: 0,    max: 100, invert: true },
+    { key: "mlScore",        label: "ML Score",      min: 0,    max: 10 },
+  ];
+
+  const N = AXES.length;
+  const SIZE = 280;
+  const cx = SIZE / 2, cy = SIZE / 2, r = 100;
+
+  function norm(val, ax) {
+    const t = Math.max(0, Math.min(1, (val - ax.min) / (ax.max - ax.min)));
+    return ax.invert ? 1 - t : t;
+  }
+
+  function axisPoint(i, radius) {
+    const angle = (i / N) * 2 * Math.PI - Math.PI / 2;
+    return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+  }
+
+  function toPath(scores) {
+    return scores.map((s, i) => {
+      const p = axisPoint(i, s * r);
+      return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    }).join(" ") + " Z";
+  }
+
+  const classes = [
+    { cls: "low",    color: "var(--risk-low)",    label: "Risc mic" },
+    { cls: "medium", color: "var(--risk-medium)",  label: "Risc mediu" },
+    { cls: "high",   color: "var(--risk-high)",    label: "Risc mare" },
+  ];
+
+  const series = classes.map(({ cls, color, label }) => {
+    const group = companies.filter(c => c.riskClass === cls);
+    if (!group.length) return { color, label, scores: AXES.map(() => 0.5) };
+    const scores = AXES.map(ax => {
+      const avg = group.reduce((s, c) => s + (c[ax.key] ?? 0), 0) / group.length;
+      return norm(avg, ax);
+    });
+    return { color, label, scores };
+  });
+
+  const rings = [0.25, 0.5, 0.75, 1.0];
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 32, flexWrap: "wrap", padding: "8px 0" }}>
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} style={{ overflow: "visible" }}>
+        {/* Grid rings */}
+        {rings.map(rk => (
+          <polygon key={rk}
+            points={AXES.map((_, i) => { const p = axisPoint(i, rk * r); return `${p.x},${p.y}`; }).join(" ")}
+            fill="none" stroke="rgba(124,138,255,0.15)" strokeWidth="0.8" />
+        ))}
+        {/* Axis lines */}
+        {AXES.map((_, i) => {
+          const p = axisPoint(i, r);
+          return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(124,138,255,0.2)" strokeWidth="0.8" />;
+        })}
+        {/* Series areas */}
+        {series.map(({ color, scores, label }) => (
+          <path key={label} d={toPath(scores)}
+            fill={color} fillOpacity="0.12"
+            stroke={color} strokeWidth="1.8" strokeOpacity="0.8" />
+        ))}
+        {/* Series dots */}
+        {series.map(({ color, scores, label }) =>
+          scores.map((s, i) => {
+            const p = axisPoint(i, s * r);
+            return <circle key={`${label}${i}`} cx={p.x} cy={p.y} r={3} fill={color} opacity="0.9" />;
+          })
+        )}
+        {/* Axis labels */}
+        {AXES.map((ax, i) => {
+          const p = axisPoint(i, r + 20);
+          return (
+            <text key={i} x={p.x} y={p.y}
+              fontSize="9.5" fontFamily="var(--font-mono)" fontWeight="700"
+              fill="var(--fg-dim)" textAnchor="middle" dominantBaseline="middle">
+              {ax.label}
+            </text>
+          );
+        })}
+        {/* Center dot */}
+        <circle cx={cx} cy={cy} r={3} fill="var(--accent)" opacity="0.6" />
+      </svg>
+
+      {/* Legend */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {series.map(({ color, label, scores }) => (
+          <div key={label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 28, height: 3, background: color, display: "inline-block", borderRadius: 2 }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color }}>{label}</span>
+            </div>
+            {AXES.map((ax, i) => (
+              <div key={ax.key} style={{ display: "flex", justifyContent: "space-between", gap: 24,
+                fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--fg-dim)", paddingLeft: 36 }}>
+                <span>{ax.label}</span>
+                <span style={{ color: "var(--fg)", fontWeight: 600 }}>{(scores[i] * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [tweaks, setTweak] = useTweaks(window.TWEAK_DEFAULTS);
   const cssVars = window.buildCssVars(tweaks.aesthetic, tweaks.mode, tweaks.riskPalette, tweaks.density);
@@ -18,7 +132,7 @@ function App() {
   const [compareTickers, setCompareTickers] = useState([]);
   const [view, setView] = useState("dashboard");
 
-  const { COMPANIES, SECTORS, FLAG_LABELS, ALERTS, BANKRUPTCY_CASES, getKPIs, getSectorStats } = window.BIQ_DATA;
+  const { COMPANIES, GLOBE_COMPANIES, SECTORS, FLAG_LABELS, ALERTS, BANKRUPTCY_CASES, getKPIs, getSectorStats } = window.BIQ_DATA;
   const sectorStats = getSectorStats();
 
   // Badge alerte — scade la 0 când utilizatorul deschide secțiunea Alerte
@@ -57,16 +171,19 @@ function App() {
     let list = COMPANIES.filter(c => {
       if (search && !(`${c.ticker} ${c.name}`.toLowerCase().includes(search.toLowerCase()))) return false;
       if (riskFilter !== "all" && c.riskClass !== riskFilter) return false;
-      if (sectorFilter !== "all" && c.sector !== sectorFilter) return false;
+      if (sectorFilter !== "all") {
+        const cs = (c.sector || "Diverse").trim();
+        if (cs !== sectorFilter) return false;
+      }
       return true;
     });
     list = [...list].sort((a, b) => {
-      let av = a[sortKey], bv = b[sortKey];
+      let av = a[sortKey] ?? "", bv = b[sortKey] ?? "";
       if (typeof av === "string") return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === "asc" ? av - bv : bv - av;
     });
     return list;
-  }, [search, sortKey, sortDir, riskFilter, sectorFilter]);
+  }, [search, sortKey, sortDir, riskFilter, sectorFilter, COMPANIES]);
 
   function toggleSort(k) {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -145,7 +262,7 @@ function App() {
               />
 
               <CompaniesGlobe
-                companies={COMPANIES}
+                companies={GLOBE_COMPANIES}
                 onSelectCompany={c => setSelectedCo(c)}
               />
 
@@ -203,31 +320,6 @@ function App() {
                 />
               )}
 
-              <div className="grid-main">
-                <Card title="Companii monitorizate" sub={`${filtered.length} din ${COMPANIES.length} · sortare ${sortKey} ${sortDir}`} actionsRight={
-                  <CompaniesFilters riskFilter={riskFilter} setRiskFilter={setRiskFilter} sectorFilter={sectorFilter} setSectorFilter={setSectorFilter} sectors={SECTORS} />
-                }>
-                  <CompaniesTable
-                    rows={filtered}
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    toggleSort={toggleSort}
-                    onClick={c => setSelectedCo(c)}
-                    onCompare={toggleCompare}
-                    compareTickers={compareTickers}
-                    sectors={SECTORS}
-                    period={period}
-                  />
-                </Card>
-
-                <Card title="Alerte recente" sub={`${ALERTS.filter(a => a.severity === "critical" || a.severity === "high").length} critice / înalt`}>
-                  <AlertsFeed alerts={ALERTS} onClickTicker={t => {
-                    const c = COMPANIES.find(co => co.ticker === t);
-                    if (c) setSelectedCo(c);
-                  }} />
-                </Card>
-              </div>
-
               <div className="grid-2">
                 <Card title="Performanță sectoare" sub="ranking după Altman Z mediu">
                   <div className="sector-rank-table">
@@ -265,6 +357,37 @@ function App() {
               <Card title="Cazuri de faliment recente — sector industrial RO" sub={`${BANKRUPTCY_CASES.length} cazuri în ultimele 24 luni · rata medie de recuperare ${(BANKRUPTCY_CASES.reduce((a, b) => a + b.recovery, 0) / BANKRUPTCY_CASES.length).toFixed(0)}%`}>
                 <BankruptcyCases cases={BANKRUPTCY_CASES} sectors={SECTORS} />
               </Card>
+
+              <div className="grid-2">
+                <Card title="Radar indicatori financiari" sub="profil mediu pe clasă de risc · normalizat 0–1">
+                  <RadarIndicators companies={COMPANIES} />
+                </Card>
+
+                <Card title="Alerte recente" sub={`${ALERTS.filter(a => a.severity === "critical" || a.severity === "high").length} critice / înalt`}>
+                  <AlertsFeed alerts={ALERTS} onClickTicker={t => {
+                    const c = COMPANIES.find(co => co.ticker === t);
+                    if (c) setSelectedCo(c);
+                  }} />
+                </Card>
+              </div>
+
+              <div className="grid-main">
+                <Card title="Indicatori financiari · toate companiile" sub={`${filtered.length} din ${COMPANIES.length} · sortare ${sortKey} ${sortDir}`} actionsRight={
+                  <CompaniesFilters riskFilter={riskFilter} setRiskFilter={setRiskFilter} sectorFilter={sectorFilter} setSectorFilter={setSectorFilter} sectors={SECTORS} />
+                }>
+                  <CompaniesTable
+                    rows={filtered}
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    toggleSort={toggleSort}
+                    onClick={c => setSelectedCo(c)}
+                    onCompare={toggleCompare}
+                    compareTickers={compareTickers}
+                    sectors={SECTORS}
+                    period={period}
+                  />
+                </Card>
+              </div>
             </>
           )}
 

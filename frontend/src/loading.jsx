@@ -1,13 +1,19 @@
-// BankruptIQ — Loading screen (landing-style, serif word fade-in + globe formation)
+// BankruptIQ — Loading screen v2 (100 companies max)
 
 const { useState: useStateL, useEffect: useEffectL, useRef: useRefL } = React;
+
+const GLOBE_LIMIT = 100;
 
 function LoadingScreen({ onComplete }) {
   const [progress, setProgress] = useStateL(0);
   const [statusIdx, setStatusIdx] = useStateL(0);
   const [done, setDone] = useStateL(false);
 
-  const COMPANIES = window.BIQ_DATA.COMPANIES;
+  // Folosim GLOBE_COMPANIES (100) sau primele 100 din COMPANIES ca fallback
+  const allC = (window.BIQ_DATA.GLOBE_COMPANIES || window.BIQ_DATA.COMPANIES || []);
+  const COMPANIES = allC.length > GLOBE_LIMIT
+    ? allC.slice(0, GLOBE_LIMIT)
+    : allC;
 
   const statusMessages = [
     "Inițializare motor de risc",
@@ -46,8 +52,8 @@ function LoadingScreen({ onComplete }) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Companies converging into globe formation
-  const visibleCompanies = Math.floor(progress * COMPANIES.length);
+  // Companiile care au "ajuns" pe glob până la momentul curent
+  const visibleCompanies = Math.min(COMPANIES.length, Math.floor(progress * COMPANIES.length) + 1);
 
   return (
     <div className={"loading-root2" + (done ? " loading-exit2" : "")}>
@@ -78,7 +84,7 @@ function LoadingScreen({ onComplete }) {
 
       {/* Globe forming animation */}
       <div className="load2-globe-wrap">
-        <LoadingGlobe progress={progress} companies={COMPANIES} visibleCount={visibleCompanies} />
+        <LoadingGlobe progress={progress} companies={COMPANIES.slice(0, visibleCompanies)} visibleCount={visibleCompanies} />
       </div>
 
       {/* Status + progress */}
@@ -100,7 +106,7 @@ function LoadingScreen({ onComplete }) {
       {/* Counter row */}
       <div className="load2-counters">
         <div className="load2-counter">
-          <div className="load2-counter-val">{visibleCompanies}<span className="load2-counter-tot">/{COMPANIES.length}</span></div>
+          <div className="load2-counter-val">{visibleCompanies}<span className="load2-counter-tot">/{GLOBE_LIMIT}</span></div>
           <div className="load2-counter-lbl">COMPANII ÎNCĂRCATE</div>
         </div>
         <div className="load2-counter-sep" />
