@@ -61,6 +61,7 @@ class CompanyOut(BaseModel):
     id: str
     company_name: str
     year: int
+    sector: Optional[str] = None
     risk_score: Optional[float]
     risk_label: Optional[str]
     is_bankrupt: Optional[int]
