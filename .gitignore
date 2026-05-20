@@ -8,3 +8,6 @@ venv/
 dist/
 build/
 .pytest_cache/
+.vscode/
+info.txt
+info100.txt

@@ -41,7 +41,7 @@ function NavBar() {
           <a href="#cases">Cazuri</a>
         </div>
         <div className="nav-cta">
-          <a href="BankruptIQ Dashboard.html" className="btn-cta">Începe gratuit →</a>
+          <a href="/dashboard" className="btn-cta">Începe gratuit →</a>
         </div>
       </div>
     </nav>
@@ -80,7 +80,7 @@ function Hero() {
       </p>
 
       <div className="hero-ctas">
-        <a href="BankruptIQ Dashboard.html" className="btn-cta btn-cta-lg">
+        <a href="/dashboard" className="btn-cta btn-cta-lg">
           Lansează dashboard
           <span className="btn-arrow">→</span>
         </a>
@@ -616,7 +616,7 @@ function CTASection() {
           <h2 className="cta-title">Vezi cine din portofoliul tău e<br /><span className="text-accent">în zona de distress</span>.</h2>
           <p className="cta-sub">Dashboard complet, fără configurare, fără card. Toate cele 18 companii BVB monitorizate live.</p>
           <div className="cta-buttons">
-            <a href="BankruptIQ Dashboard.html" className="btn-cta btn-cta-lg">
+            <a href="/dashboard" className="btn-cta btn-cta-lg">
               Lansează dashboard
               <span className="btn-arrow">→</span>
             </a>
@@ -642,7 +642,7 @@ function Footer() {
             <div className="footer-col-head">Produs</div>
             <a href="#features">Funcționalități</a>
             <a href="#preview">Demo</a>
-            <a href="BankruptIQ Dashboard.html">Dashboard</a>
+            <a href="/dashboard">Dashboard</a>
             <a href="#">API</a>
           </div>
           <div>

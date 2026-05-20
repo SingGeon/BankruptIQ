@@ -52,6 +52,7 @@ async def upload_csv(file: UploadFile = File(...)):
         doc = {
             "company_name": str(row.get("company_name", "Necunoscut")),
             "year": int(row.get("year", 0)),
+            "sector": str(row.get("sector", "Diverse")) if row.get("sector") else "Diverse",
             "indicators": {col: float(row.get(col, 0.0)) for col in FEATURE_COLUMNS},
             "is_bankrupt": int(row[OPTIONAL_LABEL_COLUMN]) if OPTIONAL_LABEL_COLUMN in row and pd.notna(row.get(OPTIONAL_LABEL_COLUMN)) else None,
             "risk_score": risk.get("risk_score"),

@@ -28,7 +28,7 @@ def _doc_to_out(doc: dict) -> dict:
 @router.get("/", response_model=list[CompanyOut])
 async def list_companies(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(500, ge=1, le=2000),
     search: str = Query(""),
 ):
     db = get_db()

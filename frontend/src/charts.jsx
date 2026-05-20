@@ -74,13 +74,21 @@ function LineChart({ series, width = 600, height = 220, padding = { t: 16, r: 20
       {xLabels && xLabels.map((lbl, i) => i % Math.ceil(len / 6) === 0 && (
         <text key={i} x={xAt(i)} y={height - padding.b + 16} fontSize="10" fill="currentColor" opacity="0.5" textAnchor="middle">{lbl}</text>
       ))}
-      {/* lines */}
+      {/* lines — suportă null pentru segmente separate (istoric/predicție) */}
       {series.map((s, si) => {
-        const path = s.data.map((v, i) => `${i === 0 ? "M" : "L"}${xAt(i)},${yAt(v)}`).join(" ");
         const color = s.color || colors[si % colors.length];
+        // Construiește path segmentat: null = ridică pixul
+        let path = "";
+        let penUp = true;
+        s.data.forEach((v, i) => {
+          if (v === null || v === undefined) { penUp = true; return; }
+          path += penUp ? `M${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}` : `L${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`;
+          penUp = false;
+        });
         return (
           <g key={si}>
-            <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
+            <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round"
+              strokeDasharray={s.dashed ? "5 4" : undefined} opacity={s.dashed ? 0.85 : 1} />
           </g>
         );
       })}
@@ -89,20 +97,24 @@ function LineChart({ series, width = 600, height = 220, padding = { t: 16, r: 20
         <g>
           <line x1={xAt(hover)} x2={xAt(hover)} y1={padding.t} y2={height - padding.b} stroke="currentColor" opacity="0.3" strokeWidth="1" />
           {series.map((s, si) => {
+            const v = s.data[hover];
+            if (v === null || v === undefined) return null;
             const color = s.color || colors[si % colors.length];
-            return <circle key={si} cx={xAt(hover)} cy={yAt(s.data[hover])} r="3.5" fill={color} stroke="var(--bg, white)" strokeWidth="1.5" />;
+            return <circle key={si} cx={xAt(hover)} cy={yAt(v)} r="3.5" fill={color} stroke="var(--bg, white)" strokeWidth="1.5" />;
           })}
           {/* tooltip */}
           <g transform={`translate(${Math.min(xAt(hover) + 8, width - 140)}, ${padding.t + 4})`}>
             <rect width="130" height={20 + series.length * 14} rx="4" fill="var(--bg-elev, #1a1a1a)" stroke="currentColor" strokeOpacity="0.15" />
             <text x="8" y="14" fontSize="10" fill="currentColor" opacity="0.6">{xLabels?.[hover] || `t=${hover}`}</text>
             {series.map((s, si) => {
+              const v = s.data[hover];
+              if (v === null || v === undefined) return null;
               const color = s.color || colors[si % colors.length];
               return (
                 <g key={si} transform={`translate(8, ${24 + si * 14})`}>
                   <rect width="8" height="2" y="4" fill={color} />
                   <text x="14" y="8" fontSize="10" fill="currentColor">{s.label}</text>
-                  <text x="122" y="8" fontSize="10" fill="currentColor" textAnchor="end" fontWeight="600">{s.data[hover].toFixed(2)}</text>
+                  <text x="122" y="8" fontSize="10" fill="currentColor" textAnchor="end" fontWeight="600">{v.toFixed(2)}</text>
                 </g>
               );
             })}
@@ -147,14 +159,15 @@ function HBarChart({ data, height = 22, gap = 6, labelW = 80, valueW = 50, color
     <div style={{ display: "flex", flexDirection: "column", gap: gap, color: textColor, fontFamily: "var(--font-mono)" }}>
       {data.map((d, i) => {
         const w = (d.value / max) * 100;
-        const color = colorFn ? colorFn(d) : (d.color || "currentColor");
+        const color = colorFn ? colorFn(d) : (d.color || "var(--accent)");
         return (
           <div key={i} style={{ display: "grid", gridTemplateColumns: `${labelW}px 1fr ${valueW}px`, alignItems: "center", gap: 8, fontSize: 11 }}>
             <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: 0.85 }}>{d.label}</div>
-            <div style={{ height: height, background: "currentColor", opacity: 0.06, position: "relative", borderRadius: 2 }}>
-              <div style={{ width: `${w}%`, height: "100%", background: color, borderRadius: 2, transition: "width 300ms" }} />
+            {/* Track: rgba separat ca să nu afecteze bara copil */}
+            <div style={{ height: height, background: "rgba(255,255,255,0.06)", borderRadius: 2, position: "relative", overflow: "hidden" }}>
+              <div style={{ width: `${w}%`, height: "100%", background: color, borderRadius: 2, transition: "width 600ms ease" }} />
             </div>
-            <div style={{ textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{d.display ?? d.value.toFixed(2)}</div>
+            <div style={{ textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums", color }}>{d.display ?? d.value.toFixed(2)}</div>
           </div>
         );
       })}

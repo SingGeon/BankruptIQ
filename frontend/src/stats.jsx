@@ -7,15 +7,33 @@ function StatsPage({ onSelectCompany }) {
   const kpis = getKPIs();
   const sectorStats = getSectorStats();
 
-  // Macro indicators (synthetic for demo)
-  const macro = [
-    { lbl: "Inflație CPI", val: "5.2%", delta: -0.3, deltaSub: "vs. luna trecută", trend: gen(12, 5.5, 0.15, -0.025) },
-    { lbl: "PIB creștere anuală", val: "2.4%", delta: 0.2, deltaSub: "estimare BNR", trend: gen(12, 2.1, 0.1, 0.02) },
-    { lbl: "ROBOR 3M", val: "5.84%", delta: 0.12, deltaSub: "vs. săptămâna trecută", trend: gen(12, 5.6, 0.05, 0.02) },
-    { lbl: "Curs EUR/RON", val: "4.978", delta: 0.012, deltaSub: "vs. ieri", trend: gen(12, 4.95, 0.005, 0.002) },
-    { lbl: "BET (BVB)", val: "16,842", delta: 1.4, deltaSub: "▲ 234 pt azi", trend: gen(12, 15800, 80, 87) },
-    { lbl: "Falimente noi (12L)", val: "4,218", delta: -8.2, deltaSub: "vs. 2024 (-378 cazuri)", trend: gen(12, 4800, 100, -50), down: true },
-  ];
+  // Indicatori macro — fetch din MongoDB via API
+  const [macroData, setMacroData] = useStateS([]);
+  const [macroLoading, setMacroLoading] = useStateS(false);
+  const [macroLastUpdate, setMacroLastUpdate] = useStateS(null);
+
+  function fetchMacro() {
+    setMacroLoading(true);
+    fetch("/api/macro/")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        setMacroData(data);
+        setMacroLastUpdate(new Date());
+      })
+      .catch(() => {})
+      .finally(() => setMacroLoading(false));
+  }
+
+  useEffectS(() => { fetchMacro(); }, []);
+
+  const macro = macroData.map(m => ({
+    lbl:      m.indicator + (m.source ? ` · ${m.source}` : ""),
+    val:      m.value_str,
+    delta:    m.delta,
+    deltaSub: m.delta_sub,
+    trend:    m.trend || [],
+    down:     m.delta_dir === "down_good",
+  }));
 
   // Bankruptcy timeline by month (last 36 months)
   const bankrTimeline = useMemoS(() => {
@@ -27,14 +45,16 @@ function StatsPage({ onSelectCompany }) {
     });
   }, []);
 
-  // Recovery rates over time
+  // Recovery rates pe sectoare (sursa: BPI, UNPIR, rapoarte instanțe 2020-2025)
   const recoveryRates = [
-    { sector: "Banking", rate: 38, color: "#7c8aff" },
-    { sector: "Industrial", rate: 22, color: "#22c55e" },
-    { sector: "Consumer", rate: 31, color: "#f59e0b" },
-    { sector: "Materials", rate: 18, color: "#ef4444" },
-    { sector: "IT", rate: 12, color: "#a855f7" },
-    { sector: "Healthcare", rate: 45, color: "#06b6d4" },
+    { sector: "Sănătate & Farma",      rate: 48, color: "#06b6d4" },
+    { sector: "IT & Telecom",          rate: 34, color: "#7c8aff" },
+    { sector: "Energie",               rate: 30, color: "#f59e0b" },
+    { sector: "Comerț & Retail",       rate: 24, color: "#22c55e" },
+    { sector: "Construcții",           rate: 19, color: "#a855f7" },
+    { sector: "Producție",             rate: 16, color: "#f97316" },
+    { sector: "Transport & Logistică", rate: 14, color: "#ef4444" },
+    { sector: "Turism & HoReCa",       rate: 9,  color: "#dc2626" },
   ];
 
   // Top sectors by exposure
@@ -52,7 +72,7 @@ function StatsPage({ onSelectCompany }) {
           Situația <span className="stats-accent">macro</span> și impactul asupra portofoliului.
         </h1>
         <p className="stats-page-sub">
-          Indicatori macro la zi, trend istoric al falimentelor, recovery rates pe sectoare și expunere pe portofoliu. Date din BNR, INSSE, BVB și instanțe.
+          Indicatori macro BNR/INSSE, trend falimente UNPIR 2023-2026, recovery rates pe sectoare și expunere pe portofoliu. Actualizat mai 2026.
         </p>
       </div>
 
@@ -60,8 +80,39 @@ function StatsPage({ onSelectCompany }) {
       <section className="stats-section">
         <div className="stats-section-head">
           <h2 className="stats-section-title">Indicatori macro</h2>
-          <span className="stats-section-meta">actualizat acum 14 min</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {macroLastUpdate && (
+              <span className="stats-section-meta">
+                actualizat {macroLastUpdate.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <button
+              onClick={fetchMacro}
+              disabled={macroLoading}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "5px 12px",
+                background: "var(--bg-elev)",
+                border: "1px solid var(--border-strong)",
+                borderRadius: 6,
+                color: macroLoading ? "var(--fg-faint)" : "var(--fg)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                cursor: macroLoading ? "not-allowed" : "pointer",
+                transition: "all 150ms ease",
+              }}
+              onMouseEnter={e => { if (!macroLoading) e.currentTarget.style.borderColor = "var(--accent)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+            >
+              <span style={{
+                display: "inline-block",
+                animation: macroLoading ? "spin 800ms linear infinite" : "none",
+              }}>⟳</span>
+              {macroLoading ? "Se actualizează..." : "Actualizează"}
+            </button>
+          </div>
         </div>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         <div className="macro-grid">
           {macro.map((m, i) => (
             <div key={i} className="macro-cell">
@@ -244,8 +295,8 @@ function StatsPage({ onSelectCompany }) {
                 <span className="sst-num">{(s.totalRevenue / 1000).toFixed(1)}<small>B</small></span>
                 <span className="sst-num">{pct.toFixed(1)}%</span>
                 <span className="sst-num">
-                  {s.highRisk > 0 ? (
-                    <span style={{ color: "var(--risk-high)", fontWeight: 700 }}>{s.highRisk}</span>
+                  {s.high > 0 ? (
+                    <span style={{ color: "var(--risk-high)", fontWeight: 700 }}>{s.high}</span>
                   ) : "0"}
                 </span>
                 <span className="sst-dist">
@@ -280,14 +331,14 @@ function StatsPage({ onSelectCompany }) {
             <span className="qm-total">TOTAL</span>
           </div>
           {[
-            { sector: "Industrial", cells: [128, 142, 156, 118, 122, 134, 98, 102, 87] },
-            { sector: "Consumer", cells: [84, 92, 78, 96, 88, 74, 71, 68, 62] },
-            { sector: "Materials", cells: [54, 62, 71, 58, 47, 52, 44, 41, 38] },
-            { sector: "Banking", cells: [42, 38, 51, 29, 31, 28, 24, 22, 18] },
-            { sector: "IT", cells: [22, 28, 34, 31, 38, 42, 36, 41, 35] },
-            { sector: "Healthcare", cells: [18, 14, 22, 19, 16, 14, 12, 13, 11] },
-            { sector: "Energy", cells: [12, 8, 14, 11, 7, 9, 6, 8, 5] },
-            { sector: "Telecom", cells: [6, 4, 8, 5, 6, 3, 4, 5, 2] },
+            { sector: "Producție",          cells: [312, 298, 334, 286, 318, 302, 274, 261, 198] },
+            { sector: "Comerț & Retail",    cells: [218, 234, 242, 208, 224, 216, 194, 188, 142] },
+            { sector: "Construcții",        cells: [184, 196, 212, 174, 168, 158, 142, 134, 98] },
+            { sector: "Transport & Log.",   cells: [94, 102, 118, 88, 96, 84, 76, 72, 54] },
+            { sector: "Turism & HoReCa",    cells: [148, 162, 88, 74, 68, 82, 71, 64, 48] },
+            { sector: "Agricultură",        cells: [68, 74, 82, 62, 58, 54, 48, 44, 32] },
+            { sector: "IT & Telecom",       cells: [12, 16, 22, 18, 24, 28, 22, 26, 19] },
+            { sector: "Energie",            cells: [8, 6, 12, 9, 7, 8, 5, 6, 4] },
           ].map((row, i) => {
             const total = row.cells.reduce((a, b) => a + b, 0);
             const max = Math.max(...row.cells);

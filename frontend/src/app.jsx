@@ -19,8 +19,38 @@ function App() {
   const [view, setView] = useState("dashboard");
 
   const { COMPANIES, SECTORS, FLAG_LABELS, ALERTS, BANKRUPTCY_CASES, getKPIs, getSectorStats } = window.BIQ_DATA;
-  const kpis = getKPIs();
   const sectorStats = getSectorStats();
+
+  // Badge alerte — scade la 0 când utilizatorul deschide secțiunea Alerte
+  const [unreadAlerts, setUnreadAlerts] = useState(() => {
+    const kpis0 = getKPIs();
+    return kpis0.totalAlerts;
+  });
+
+  function navigateTo(newView) {
+    setView(newView);
+    if (newView === "alerts") setUnreadAlerts(0);
+  }
+
+  // KPI-uri calculate în funcție de perioadă:
+  // 1Y → index 59 (luna curentă), 3Y → index 24 (acum 3 ani), 5Y → index 0 (acum 5 ani)
+  const periodKpis = useMemo(() => {
+    const periodIdx = { "1Y": 59, "3Y": 24, "5Y": 0 }[period];
+    let high = 0, medium = 0, low = 0, zSum = 0;
+    for (const c of COMPANIES) {
+      const z = c.zTrend[periodIdx];
+      zSum += z;
+      if (z < 1.81) high++;
+      else if (z < 2.99) medium++;
+      else low++;
+    }
+    const total = COMPANIES.length;
+    const avgZ = total > 0 ? +(zSum / total).toFixed(2) : 0;
+    const base = getKPIs();
+    return { ...base, high, medium, low, avgZ };
+  }, [period]);
+
+  const kpis = periodKpis;
 
   // Filtered + sorted companies
   const filtered = useMemo(() => {
@@ -53,7 +83,7 @@ function App() {
 
   const compareCompanies = compareTickers.map(t => COMPANIES.find(c => c.ticker === t)).filter(Boolean);
 
-  // Risk distribution
+  // Distribuție risc bazată pe perioadă
   const riskSegs = [
     { value: kpis.low, color: "var(--risk-low)", label: "Scăzut" },
     { value: kpis.medium, color: "var(--risk-medium)", label: "Mediu" },
@@ -99,10 +129,9 @@ function App() {
   return (
     <div className="app" style={cssVars}>
       {loading && <LoadingScreen onComplete={() => setLoading(false)} />}
-      <Sidebar view={view} setView={setView} kpis={kpis} />
+      <Sidebar view={view} setView={navigateTo} kpis={kpis} unreadAlerts={unreadAlerts} />
       <main className="main">
         <TopBar period={period} setPeriod={setPeriod} search={search} setSearch={setSearch} compareCount={compareTickers.length} />
-        <LiveTicker companies={COMPANIES} />
         <div className="scroll-area">
           {view === "dashboard" && (
             <>
@@ -275,7 +304,7 @@ function App() {
             compareCompanies.length > 0 ? (
               <ComparePanel
                 companies={compareCompanies}
-                onClose={() => { setCompareTickers([]); setView("dashboard"); }}
+                onClose={() => { setCompareTickers([]); navigateTo("dashboard"); }}
                 onRemove={t => setCompareTickers(arr => arr.filter(x => x !== t))}
                 period={period}
               />
@@ -283,7 +312,7 @@ function App() {
               <Card title="Comparator" sub="selectează 2-3 companii din tabel pentru comparație">
                 <div style={{ padding: 40, textAlign: "center", color: "var(--fg-dim)" }}>
                   <div style={{ fontSize: 14, marginBottom: 12 }}>Nicio companie selectată</div>
-                  <button className="btn" onClick={() => setView("dashboard")}>Mergi la tabel</button>
+                  <button className="btn" onClick={() => navigateTo("dashboard")}>Mergi la tabel</button>
                 </div>
               </Card>
             )
@@ -324,11 +353,11 @@ function App() {
 }
 
 // ---------- Sidebar ----------
-function Sidebar({ view, setView, kpis }) {
+function Sidebar({ view, setView, kpis, unreadAlerts }) {
   const items = [
     { id: "dashboard", label: "Dashboard", icon: "▣" },
     { id: "stats", label: "Statistici", icon: "◫" },
-    { id: "alerts", label: "Alerte", icon: "△", badge: kpis.totalAlerts },
+    { id: "alerts", label: "Alerte", icon: "△", badge: unreadAlerts > 0 ? unreadAlerts : undefined },
     { id: "sectors", label: "Sectoare", icon: "≡" },
     { id: "compare", label: "Comparator", icon: "⇄" },
   ];
@@ -386,8 +415,6 @@ function TopBar({ period, setPeriod, search, setSearch, compareCount }) {
       {compareCount > 0 && (
         <div className="compare-pill">{compareCount} în comparator</div>
       )}
-      <button className="btn-ghost">Export</button>
-      <button className="btn">+ Adaugă companie</button>
     </header>
   );
 }
@@ -524,23 +551,77 @@ function CompaniesTable({ rows, sortKey, sortDir, toggleSort, onClick, onCompare
 }
 
 // ---------- Alerts feed ----------
+const SEV_LABEL = { critical: "CRITIC", high: "ÎNALT", medium: "MEDIU" };
+
 function AlertsFeed({ alerts, onClickTicker, expanded }) {
+  const [dismissed, setDismissed] = useState(new Set());
+
+  const visible = alerts.filter(a => !dismissed.has(a.id));
+
+  if (visible.length === 0) {
+    return (
+      <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--fg-faint)", fontSize: 13 }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>✓</div>
+        Nicio alertă activă · toate au fost rezolvate.
+      </div>
+    );
+  }
+
   return (
     <div className="alerts-feed">
-      {alerts.map(a => (
-        <div key={a.id} className="alert-item" onClick={() => onClickTicker(a.ticker)}>
-          <div className="alert-sev" style={{ background: window.severityColor(a.severity) }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="alert-head">
-              <span className="alert-ticker">{a.ticker}</span>
-              <span className="alert-time">{a.time}</span>
+      {visible.map(a => {
+        const sev = window.severityColor(a.severity);
+        return (
+          <div key={a.id} className="alert-item" style={{ cursor: "pointer" }}>
+            {/* Bara laterală de severitate */}
+            <div className="alert-sev" style={{ background: sev }} />
+
+            {/* Corp alertă — click → deschide compania */}
+            <div style={{ flex: 1, minWidth: 0 }} onClick={() => onClickTicker(a.ticker)}>
+              <div className="alert-head">
+                <span className="alert-ticker" style={{ color: sev }}>{a.ticker}</span>
+                <span className="alert-badge" style={{
+                  fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.12em",
+                  background: `color-mix(in oklab, ${sev} 15%, transparent)`,
+                  color: sev, padding: "2px 7px", borderRadius: 999,
+                  fontWeight: 700, border: `1px solid color-mix(in oklab, ${sev} 30%, transparent)`
+                }}>
+                  {SEV_LABEL[a.severity] || a.severity.toUpperCase()}
+                </span>
+                <span className="alert-time" style={{ marginLeft: "auto" }}>{a.time}</span>
+              </div>
+              <div className="alert-title">{a.title}</div>
+              {(expanded || !expanded) && (
+                <div className="alert-detail" style={{
+                  maxHeight: expanded ? "none" : "2.6em",
+                  overflow: "hidden",
+                  WebkitLineClamp: expanded ? "none" : 2,
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                }}>
+                  {a.detail}
+                </div>
+              )}
             </div>
-            <div className="alert-title">{a.title}</div>
-            {expanded && <div className="alert-detail">{a.detail}</div>}
-            {!expanded && <div className="alert-detail alert-detail-short">{a.detail}</div>}
+
+            {/* Buton dismiss */}
+            <button
+              onClick={e => { e.stopPropagation(); setDismissed(prev => new Set([...prev, a.id])); }}
+              title="Marchează ca rezolvat"
+              style={{
+                flexShrink: 0, alignSelf: "center",
+                background: "none", border: "none", cursor: "pointer",
+                color: "var(--fg-faint)", fontSize: 16, padding: "4px 8px",
+                borderRadius: 4, transition: "color 150ms",
+              }}
+              onMouseEnter={e => e.target.style.color = "var(--fg)"}
+              onMouseLeave={e => e.target.style.color = "var(--fg-faint)"}
+            >
+              ✕
+            </button>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -564,46 +645,6 @@ function BankruptcyCases({ cases, sectors }) {
           <div className="case-status" data-status={b.status}>{b.status}</div>
         </div>
       ))}
-    </div>
-  );
-}
-
-// ---------- Live ticker strip ----------
-function LiveTicker({ companies }) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 1800);
-    return () => clearInterval(id);
-  }, []);
-  // simulate live delta per ticker
-  const items = companies.map((c, i) => {
-    const seed = (c.ticker.charCodeAt(0) + tick * 17 + i * 7) % 100;
-    const delta = ((seed - 50) / 100) * 0.18;
-    const z = (c.zscore + delta);
-    const up = delta > 0;
-    return { ticker: c.ticker, z: z.toFixed(2), delta: delta.toFixed(2), up, riskCls: c.riskClass };
-  });
-  // duplicate for seamless scroll
-  const stream = [...items, ...items];
-  return (
-    <div className="live-ticker">
-      <div className="live-ticker-label">
-        <span className="live-dot" />
-        LIVE
-      </div>
-      <div className="live-ticker-track">
-        <div className="live-ticker-stream">
-          {stream.map((it, i) => (
-            <div key={i} className="lt-item">
-              <span className="lt-ticker">{it.ticker}</span>
-              <span className="lt-z" style={{ color: window.riskColor(it.riskCls) }}>{it.z}</span>
-              <span className={"lt-delta " + (it.up ? "lt-up" : "lt-down")}>
-                {it.up ? "▲" : "▼"}{Math.abs(parseFloat(it.delta)).toFixed(2)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

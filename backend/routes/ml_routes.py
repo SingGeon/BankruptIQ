@@ -52,7 +52,7 @@ async def predict_risk(req: PredictionRequest):
 
 @router.post("/predict-all")
 async def predict_all_companies():
-    """Re-calculează scorul de risc pentru toate companiile din baza de date."""
+    """Re-calculează scorul de risc pentru toate companiile și regenerează alertele."""
     db = get_db()
     cursor = db["companies"].find({}, {"indicators": 1, "company_name": 1})
     docs = await cursor.to_list(length=10_000)
@@ -67,7 +67,6 @@ async def predict_all_companies():
         raise HTTPException(status_code=400, detail=str(e))
 
     from datetime import datetime
-    from bson import ObjectId
 
     updated = 0
     for doc, res in zip(docs, results):
@@ -75,16 +74,81 @@ async def predict_all_companies():
             {"_id": doc["_id"]},
             {
                 "$set": {
-                    "risk_score": res["risk_score"],
-                    "risk_label": res["risk_label"],
+                    "risk_score":   res["risk_score"],
+                    "risk_label":   res["risk_label"],
+                    "altman_z":     res.get("altman_z"),
                     "predicted_at": datetime.utcnow(),
                 }
             },
         )
         updated += 1
 
-    logger.info("Re-scoring complet: %d companii actualizate", updated)
-    return {"updated": updated}
+    # Regenerează alertele pe baza noilor scoruri
+    from backend.routes.alerts import generate_alerts as _gen_alerts
+    alert_result = await _gen_alerts()
+
+    logger.info("Re-scoring complet: %d companii, %d alerte", updated, alert_result["generated"])
+    return {"updated": updated, "alerts_generated": alert_result["generated"]}
+
+
+@router.get("/forecast/{company_name}")
+async def forecast_company(company_name: str, months: int = 12):
+    """
+    Proiectează scorul de risc pentru o companie pe N luni viitoare.
+    Returnează lista de scoruri lunare estimate.
+    """
+    if months < 1 or months > 60:
+        raise HTTPException(status_code=400, detail="months trebuie să fie între 1 și 60.")
+
+    db = get_db()
+    cursor = db["companies"].find(
+        {"company_name": company_name},
+        {"indicators": 1, "year": 1, "risk_score": 1}
+    ).sort("year", -1).limit(5)
+    docs = await cursor.to_list(length=5)
+
+    if not docs:
+        raise HTTPException(status_code=404, detail="Compania nu a fost găsită.")
+
+    try:
+        from backend.ml.predictor import predict_batch
+        import math
+
+        # Calculăm scorul de bază din cel mai recent an
+        latest_ind = docs[0]["indicators"]
+        base_score = docs[0].get("risk_score")
+        if base_score is None:
+            results = predict_batch([latest_ind])
+            base_score = results[0]["risk_score"] if results else 50.0
+
+        # Tendința: diferența medie anuală din istoricul disponibil
+        if len(docs) >= 2:
+            scores = []
+            for d in docs:
+                if d.get("risk_score") is not None:
+                    scores.append(d["risk_score"])
+                else:
+                    r = predict_batch([d["indicators"]])
+                    scores.append(r[0]["risk_score"])
+            if len(scores) >= 2:
+                annual_trend = (scores[-1] - scores[0]) / max(1, len(scores) - 1)
+            else:
+                annual_trend = 0.0
+        else:
+            annual_trend = 0.0
+
+        # Proiecție lunară: tendință + zgomot mic deterministic
+        monthly_trend = annual_trend / 12
+        forecast = []
+        v = base_score
+        for i in range(months):
+            v = max(0.0, min(100.0, v + monthly_trend + math.sin(i * 0.7) * 0.8))
+            forecast.append(round(v, 2))
+
+        return {"company_name": company_name, "base_score": base_score, "months": months, "forecast": forecast}
+
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/model-info")
