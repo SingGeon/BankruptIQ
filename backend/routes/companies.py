@@ -40,6 +40,40 @@ async def list_companies(
     return [_doc_to_out(d) for d in docs]
 
 
+@router.get("/sector-stats")
+async def get_sector_stats():
+    db = get_db()
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$sector",
+                "count": {"$sum": 1},
+                "avg_risk_score": {"$avg": "$risk_score"},
+                "high_risk": {"$sum": {"$cond": [{"$eq": ["$risk_label", "Risc mare"]}, 1, 0]}},
+                "bankrupt": {"$sum": {"$cond": [{"$eq": ["$is_bankrupt", 1]}, 1, 0]}},
+                "avg_debt_ratio": {"$avg": "$indicators.debt_ratio"},
+                "avg_current_ratio": {"$avg": "$indicators.current_ratio"},
+                "avg_npm": {"$avg": "$indicators.net_profit_margin"},
+            }
+        },
+        {"$sort": {"avg_risk_score": -1}},
+    ]
+    docs = await db["companies"].aggregate(pipeline).to_list(100)
+    return [
+        {
+            "sector": d["_id"] or "Necunoscut",
+            "count": d["count"],
+            "avg_risk_score": round(d["avg_risk_score"], 1) if d["avg_risk_score"] else None,
+            "high_risk": d["high_risk"],
+            "bankrupt": d["bankrupt"],
+            "avg_debt_ratio": round(d["avg_debt_ratio"], 3) if d["avg_debt_ratio"] else None,
+            "avg_current_ratio": round(d["avg_current_ratio"], 3) if d["avg_current_ratio"] else None,
+            "avg_npm": round(d["avg_npm"], 2) if d["avg_npm"] else None,
+        }
+        for d in docs
+    ]
+
+
 @router.get("/stats")
 async def get_stats():
     db = get_db()
