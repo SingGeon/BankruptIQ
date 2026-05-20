@@ -1,826 +1,1004 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BankruptIQ — Analiză Risc Financiar</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BankruptIQ — Analiză predictivă de faliment pentru companii BVB</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
   <style>
-    /* ── Design tokens ──────────────────────────────────── */
     :root {
-      --bg:          #080c14;
-      --bg2:         #0d1117;
-      --surface:     #111827;
-      --surface2:    #1a2233;
-      --border:      #1e2d42;
-      --border2:     #243447;
-      --accent:      #3b82f6;
-      --accent2:     #60a5fa;
-      --accent-glow: rgba(59,130,246,.18);
-      --risk-low:    #22c55e;
-      --risk-med:    #f59e0b;
-      --risk-high:   #ef4444;
-      --fg:          #e2e8f0;
-      --fg2:         #94a3b8;
-      --fg3:         #4b5e77;
-      --mono:        'JetBrains Mono', monospace;
-      --r:           10px;
+      --bg: #08090b;
+      --bg-elev: #0d0f13;
+      --bg-elev-2: #14171c;
+      --bg-card: #0f1116;
+      --fg: #e8e9ee;
+      --fg-dim: #9aa0ac;
+      --fg-faint: #555a66;
+      --border: #1b1e25;
+      --border-strong: #2a2e38;
+      --accent: #7c8aff;
+      --accent-glow: rgba(124, 138, 255, 0.4);
+      --accent-soft: rgba(124, 138, 255, 0.12);
+      --serif: "Instrument Serif", Georgia, serif;
+      --sans: "Geist", system-ui, sans-serif;
+      --mono: "Geist Mono", ui-monospace, monospace;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%;overflow:hidden}
-    body{background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;font-size:13px;display:flex}
 
-    /* ── Sidebar ────────────────────────────────────────── */
-    .sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0;z-index:10}
-    .brand{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
-    .brand-logo{font-size:18px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:6px}
-    .brand-logo .iq{color:var(--accent)}
-    .brand-sub{font-size:10px;color:var(--fg3);margin-top:3px;font-family:var(--mono)}
-    .nav{padding:10px 8px;flex:1;display:flex;flex-direction:column;gap:2px}
-    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--fg2);border:none;background:none;width:100%;text-align:left;transition:all .15s}
-    .nav-item:hover{background:var(--surface);color:var(--fg)}
-    .nav-item.active{background:var(--accent-glow);color:var(--accent);font-weight:600}
-    .nav-item .icon{font-size:15px;width:20px;text-align:center}
-    .sidebar-footer{padding:12px 14px;border-top:1px solid var(--border)}
-    .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--risk-low);box-shadow:0 0 6px var(--risk-low);animation:pulse 2s infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-    .status-text{font-size:10px;color:var(--fg3);margin-top:4px}
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; cursor: pointer; }
 
-    /* ── Main ───────────────────────────────────────────── */
-    .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-    .topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 20px;flex-shrink:0}
-    .topbar-title{font-weight:700;font-size:14px}
-    .topbar-spacer{flex:1}
-    .search-wrap{position:relative;display:flex;align-items:center}
-    .search-icon{position:absolute;left:10px;color:var(--fg3);font-size:14px;pointer-events:none}
-    .search-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--fg);padding:7px 12px 7px 32px;font-size:13px;width:240px;outline:none;font-family:'Inter',sans-serif}
-    .search-input:focus{border-color:var(--accent)}
-    .scroll-area{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
-    .scroll-area::-webkit-scrollbar{width:6px}
-    .scroll-area::-webkit-scrollbar-track{background:var(--bg)}
-    .scroll-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+    .landing {
+      max-width: 100%;
+      overflow-x: hidden;
+      position: relative;
+    }
 
-    /* ── KPI row ────────────────────────────────────────── */
-    .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-    .kpi-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;transition:border-color .2s}
-    .kpi-tile:hover{border-color:var(--border2)}
-    .kpi-label{font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-family:var(--mono)}
-    .kpi-value{font-size:26px;font-weight:700;line-height:1;letter-spacing:-1px}
-    .kpi-sub{font-size:10px;color:var(--fg3);margin-top:5px}
-    .kpi-high .kpi-value{color:var(--risk-high)}
-    .kpi-med  .kpi-value{color:var(--risk-med)}
-    .kpi-low  .kpi-value{color:var(--risk-low)}
-    .kpi-acc  .kpi-value{color:var(--accent)}
+    /* ───── shared section heading ───── */
+    .section-head {
+      max-width: 760px;
+      margin: 0 auto 56px;
+      text-align: center;
+    }
+    .section-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      padding: 5px 12px;
+      border: 1px solid var(--accent-soft);
+      border-radius: 999px;
+      background: var(--accent-soft);
+      margin-bottom: 22px;
+    }
+    .section-title {
+      font-family: var(--serif);
+      font-size: clamp(36px, 5vw, 60px);
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin: 0 0 18px;
+      color: var(--fg);
+      text-wrap: balance;
+    }
+    .text-accent { color: var(--accent); font-style: italic; }
+    .section-sub {
+      color: var(--fg-dim);
+      font-size: 17px;
+      max-width: 620px;
+      margin: 0 auto;
+      text-wrap: pretty;
+    }
 
-    /* ── Charts row ─────────────────────────────────────── */
-    .charts-row{display:grid;grid-template-columns:280px 1fr 1fr;gap:12px}
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
-    .card-head{padding:14px 16px 0;display:flex;align-items:flex-start;justify-content:space-between}
-    .card-title{font-size:12px;font-weight:600;color:var(--fg);text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono)}
-    .card-sub{font-size:10px;color:var(--fg3);margin-top:2px}
-    .card-body{padding:12px 16px 16px}
+    /* ───── buttons ───── */
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      background: var(--fg);
+      color: var(--bg);
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: transform 200ms ease, background 200ms ease, box-shadow 200ms ease;
+      border: 1px solid var(--fg);
+    }
+    .btn-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.12);
+    }
+    .btn-cta-lg {
+      padding: 14px 22px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .btn-cta-lg .btn-arrow {
+      transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .btn-cta-lg:hover .btn-arrow { transform: translateX(4px); }
+    .btn-ghost-nav {
+      padding: 9px 14px;
+      color: var(--fg-dim);
+      font-size: 14px;
+      transition: color 160ms ease;
+    }
+    .btn-ghost-nav:hover { color: var(--fg); }
+    .btn-ghost-lg {
+      display: inline-flex;
+      align-items: center;
+      padding: 14px 22px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      color: var(--fg);
+      font-weight: 500;
+      font-size: 15px;
+      transition: all 200ms ease;
+    }
+    .btn-ghost-lg:hover { border-color: var(--fg-dim); background: var(--bg-elev); }
 
-    /* ── Donut ──────────────────────────────────────────── */
-    .donut-wrap{display:flex;align-items:center;gap:20px;padding:8px 0}
-    .donut-legend{display:flex;flex-direction:column;gap:8px}
-    .leg-item{display:flex;align-items:center;gap:8px;font-size:11px}
-    .leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
-    .leg-label{color:var(--fg2);width:70px}
-    .leg-val{font-weight:700;font-family:var(--mono)}
-    .leg-pct{color:var(--fg3);font-size:10px;margin-left:2px}
+    /* ───── NAV ───── */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 12px 24px;
+      transition: padding 200ms ease, background 200ms ease;
+    }
+    .nav-scrolled {
+      padding: 8px 24px;
+      background: rgba(8, 9, 11, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+    .nav-logo-mark {
+      width: 28px; height: 28px;
+      background: var(--bg-elev-2);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: -0.02em;
+    }
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      font-size: 14px;
+    }
+    .nav-links a {
+      color: var(--fg-dim);
+      transition: color 160ms ease;
+      position: relative;
+    }
+    .nav-links a:hover { color: var(--fg); }
+    .nav-cta { display: flex; align-items: center; gap: 6px; }
 
-    /* ── Table ──────────────────────────────────────────── */
-    .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
-    .section-head{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
-    .section-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono)}
-    .section-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
-    .filter-pills{display:flex;gap:4px}
-    .pill{padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:none;color:var(--fg2);font-size:11px;cursor:pointer;transition:all .15s}
-    .pill:hover{border-color:var(--accent);color:var(--accent)}
-    .pill.active-all{border-color:var(--accent);background:var(--accent-glow);color:var(--accent2)}
-    .pill.active-low{border-color:var(--risk-low);background:rgba(34,197,94,.12);color:var(--risk-low)}
-    .pill.active-med{border-color:var(--risk-med);background:rgba(245,158,11,.12);color:var(--risk-med)}
-    .pill.active-high{border-color:var(--risk-high);background:rgba(239,68,68,.12);color:var(--risk-high)}
+    /* ───── HERO ───── */
+    .hero {
+      position: relative;
+      padding: 180px 24px 80px;
+      max-width: 1240px;
+      margin: 0 auto;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero-ambient {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 1200px;
+      height: 700px;
+      background: radial-gradient(ellipse 50% 50% at center 30%, var(--accent-glow), transparent 70%);
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: -1;
+      animation: ambientFloat 18s ease-in-out infinite;
+    }
+    @keyframes ambientFloat {
+      0%, 100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 0.4; }
+      50%      { transform: translateX(-48%) translateY(-20px) scale(1.05); opacity: 0.55; }
+    }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 70% 60% at center 30%, black, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at center 30%, black, transparent 80%);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      background: var(--bg-elev);
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--fg-dim);
+      margin-bottom: 36px;
+      opacity: 0;
+      animation: fadeUp 600ms ease forwards;
+    }
+    .hero-tag-dot {
+      width: 6px; height: 6px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #22c55e;
+      animation: livePulse 1.6s ease-in-out infinite;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
 
-    .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse}
-    thead tr{border-bottom:1px solid var(--border)}
-    th{padding:10px 12px;text-align:left;font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:.6px;font-weight:600;user-select:none;white-space:nowrap;font-family:var(--mono)}
-    th.sortable{cursor:pointer}
-    th.sortable:hover{color:var(--fg)}
-    th.num,td.num{text-align:right}
-    tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
-    tbody tr:hover{background:var(--surface2)}
-    tbody tr:last-child{border-bottom:none}
-    td{padding:10px 12px;font-size:12px}
-    .risk-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;font-family:var(--mono)}
-    .risk-badge.low{background:rgba(34,197,94,.12);color:var(--risk-low);border:1px solid rgba(34,197,94,.3)}
-    .risk-badge.med{background:rgba(245,158,11,.12);color:var(--risk-med);border:1px solid rgba(245,158,11,.3)}
-    .risk-badge.high{background:rgba(239,68,68,.12);color:var(--risk-high);border:1px solid rgba(239,68,68,.3)}
-    .risk-badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
-    .score-bar-wrap{width:80px}
-    .score-bar-bg{height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
-    .score-bar-fill{height:100%;border-radius:2px}
-    .score-num{font-family:var(--mono);font-size:11px;margin-top:2px}
-    .co-name{font-weight:500}
-    .sector-tag{font-size:10px;color:var(--fg3);font-family:var(--mono)}
-    .empty-state{padding:40px;text-align:center;color:var(--fg3)}
+    .hero-headline {
+      font-family: var(--serif);
+      font-size: clamp(48px, 8vw, 96px);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      margin: 0 0 30px;
+      max-width: 1100px;
+      margin-inline: auto;
+      text-wrap: balance;
+    }
+    .hero-word {
+      display: inline-block;
+      margin-right: 0.22em;
+      opacity: 0;
+      transform: translateY(20px);
+      filter: blur(4px);
+      animation: wordIn 800ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes wordIn {
+      to { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+    .hero-word-accent {
+      font-style: italic;
+      color: var(--accent);
+      position: relative;
+    }
+    .hero-word-accent::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: 0.08em;
+      height: 0.06em;
+      background: var(--accent);
+      transform-origin: left;
+      transform: scaleX(0);
+      animation: lineDraw 700ms 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      opacity: 0.5;
+    }
+    @keyframes lineDraw { to { transform: scaleX(1); } }
 
-    /* ── Modal ──────────────────────────────────────────── */
-    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center}
-    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.6)}
-    .modal-head{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
-    .modal-title{font-size:16px;font-weight:700}
-    .modal-sub{font-size:11px;color:var(--fg3);margin-top:3px}
-    .modal-close{background:none;border:none;color:var(--fg3);font-size:20px;cursor:pointer;padding:0 4px;line-height:1}
-    .modal-close:hover{color:var(--fg)}
-    .modal-body{padding:20px 24px}
-    .detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-    .detail-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
-    .detail-key{font-size:9px;color:var(--fg3);text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono);margin-bottom:4px}
-    .detail-val{font-size:14px;font-weight:700;font-family:var(--mono)}
+    .hero-subtitle {
+      max-width: 640px;
+      margin: 0 auto 44px;
+      font-size: 18px;
+      color: var(--fg-dim);
+      line-height: 1.55;
+      text-wrap: pretty;
+    }
+    .hero-subword {
+      opacity: 0;
+      animation: fadeUp 400ms ease forwards;
+      display: inline-block;
+      margin-right: 0.28em;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-    /* ── Sectors ────────────────────────────────────────── */
-    .sector-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px}
-    .sector-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
-    .sector-name{font-size:13px;font-weight:600;margin-bottom:8px}
-    .sector-bar{height:4px;background:var(--border2);border-radius:2px;overflow:hidden;margin:8px 0}
-    .sector-bar-fill{height:100%;border-radius:2px;transition:width .6s}
-    .sector-stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-    .sector-stat{font-size:10px}
-    .sector-stat-label{color:var(--fg3);font-family:var(--mono)}
-    .sector-stat-val{font-weight:600;font-family:var(--mono)}
+    .hero-ctas {
+      display: flex; justify-content: center; gap: 12px;
+      margin-bottom: 80px;
+      opacity: 0;
+      animation: fadeUp 600ms 1400ms ease forwards;
+      flex-wrap: wrap;
+    }
 
-    /* ── Settings ───────────────────────────────────────── */
-    .settings-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px}
-    .settings-title{font-size:13px;font-weight:600;margin-bottom:6px}
-    .settings-desc{font-size:12px;color:var(--fg2);margin-bottom:16px;line-height:1.7}
-    .code-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:11px;line-height:2;color:var(--fg2)}
-    .code-comment{color:var(--fg3)}
-    .settings-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
-    .metric-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
-    .metric-key{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--fg3);font-family:var(--mono);margin-bottom:4px}
-    .metric-val{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--accent2)}
+    .hero-meta {
+      display: flex; justify-content: center; align-items: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 600ms 1800ms ease forwards;
+    }
+    .hero-meta-item { text-align: center; }
+    .hero-meta-num {
+      font-family: var(--serif);
+      font-size: 38px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+      font-variant-numeric: tabular-nums;
+    }
+    .hero-meta-lbl {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--fg-faint);
+      margin-top: 6px;
+      text-transform: uppercase;
+    }
+    .hero-meta-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border-strong);
+    }
 
-    /* ── Sources ────────────────────────────────────────── */
-    .sources-list{display:flex;flex-direction:column;gap:10px}
-    .source-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px}
-    .source-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0}
-    .source-name{font-weight:600;font-size:12px}
-    .source-desc{font-size:11px;color:var(--fg3);margin-top:2px;line-height:1.5}
-    .source-link{margin-left:auto;color:var(--accent);font-size:10px;text-decoration:none;font-family:var(--mono);white-space:nowrap;padding-left:12px}
-    .source-link:hover{text-decoration:underline}
+    /* ───── PRODUCT PREVIEW ───── */
+    .preview {
+      padding: 40px 24px 60px;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .preview-frame {
+      background: var(--bg-elev);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.02),
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 80px var(--accent-soft);
+      opacity: 0;
+      transform: translateY(40px) scale(0.97);
+      transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1), transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .preview-frame.visible { opacity: 1; transform: translateY(0) scale(1); }
 
-    /* ── Feature importance ─────────────────────────────── */
-    .fi-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-    .fi-label{width:150px;font-size:10px;color:var(--fg2);text-align:right;font-family:var(--mono);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .fi-bar-bg{flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
-    .fi-bar-fill{height:100%;border-radius:3px;background:var(--accent)}
-    .fi-val{width:36px;font-size:10px;color:var(--fg3);font-family:var(--mono);text-align:right}
+    .preview-chrome {
+      display: flex; align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-elev-2);
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+    }
+    .preview-dots { display: flex; gap: 6px; }
+    .preview-dots span {
+      width: 11px; height: 11px;
+      background: var(--border-strong);
+      border-radius: 50%;
+    }
+    .preview-dots span:nth-child(1) { background: #ed6a5e; }
+    .preview-dots span:nth-child(2) { background: #f5bf4f; }
+    .preview-dots span:nth-child(3) { background: #62c554; }
+    .preview-url {
+      flex: 1;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--fg-faint);
+      padding: 4px 10px;
+      background: var(--bg-elev);
+      border-radius: 6px;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .preview-live {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: #ef4444;
+      font-weight: 600;
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      background: #ef4444;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #ef4444;
+      animation: livePulse 1.2s ease-in-out infinite;
+    }
+    .preview-body {
+      background: #0a0c10;
+      min-height: 540px;
+    }
 
-    /* ── Buttons ────────────────────────────────────────── */
-    .btn{padding:8px 16px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
-    .btn-primary{background:var(--accent);color:#fff}
-    .btn-primary:hover{background:var(--accent2)}
-    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-    .btn-ghost{background:none;border:1px solid var(--border2);color:var(--fg2)}
-    .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+    .preview-caption {
+      display: flex; justify-content: center; align-items: center;
+      gap: 14px;
+      margin-top: 24px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--fg-dim);
+    }
+    .preview-caption-num {
+      color: var(--accent);
+      font-weight: 600;
+    }
 
-    /* ── Toast ──────────────────────────────────────────── */
-    #toasts{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-    .toast{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:12px;max-width:320px;pointer-events:all;animation:slideIn .2s ease}
-    .toast.ok{border-color:var(--risk-low);color:var(--risk-low)}
-    .toast.err{border-color:var(--risk-high);color:var(--risk-high)}
-    @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+    /* ───── Dashboard mockup (inside preview frame) ───── */
+    .mock {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      min-height: 540px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+    .mock-side {
+      background: #0a0c10;
+      border-right: 1px solid #1a1e26;
+      padding: 14px 10px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .mock-brand {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 14px;
+      padding: 6px 8px;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .mock-nav-item {
+      padding: 7px 10px;
+      color: #6b7280;
+      border-radius: 4px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px;
+    }
+    .mock-nav-item.active { background: #14171c; color: #e5e7eb; border-left: 2px solid var(--accent); padding-left: 8px; }
+    .mock-badge {
+      margin-left: auto;
+      background: #f59e0b;
+      color: #000;
+      font-family: var(--mono);
+      font-size: 9px;
+      padding: 0 5px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    .mock-main { display: flex; flex-direction: column; }
+    .mock-topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #1a1e26;
+      background: rgba(13, 15, 19, 0.6);
+    }
+    .mock-search {
+      flex: 1;
+      padding: 6px 10px;
+      background: #0f1116;
+      border: 1px solid #1a1e26;
+      border-radius: 6px;
+      color: #6b7280;
+      font-size: 11px;
+    }
+    .mock-seg {
+      display: flex;
+      background: #0f1116;
+      border: 1px solid #1a1e26;
+      border-radius: 6px;
+      padding: 2px;
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+    .mock-seg span { padding: 3px 8px; color: #6b7280; border-radius: 3px; }
+    .mock-seg .active { background: #1a1e26; color: #e5e7eb; }
+
+    .mock-ticker {
+      display: flex; align-items: center;
+      padding: 6px 14px;
+      gap: 10px;
+      background: #0d0f13;
+      border-bottom: 1px solid #1a1e26;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      overflow: hidden;
+    }
+    .mock-ticker-stream {
+      display: flex; gap: 20px;
+      color: #d1d5db;
+      animation: tickerSlow 28s linear infinite;
+      white-space: nowrap;
+    }
+    .mock-ticker-stream span b { color: #e5e7eb; }
+    @keyframes tickerSlow {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    .mock-hero {
+      display: grid;
+      grid-template-columns: 220px 1fr 220px;
+      gap: 1px;
+      background: #1a1e26;
+      border-bottom: 1px solid #1a1e26;
+    }
+    .mock-z, .mock-metrics, .mock-alerts {
+      background: #0d0f13;
+      padding: 14px;
+    }
+    .mock-tag {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .mock-gauge { display: block; margin: 4px auto; }
+    .mock-livechart { display: block; margin: 6px 0 4px; }
+    .mock-z { text-align: left; display: flex; flex-direction: column; }
+    .mock-z-row {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      padding-top: 6px;
+      border-top: 1px solid #1a1e26;
+      margin-top: 8px;
+    }
+    .mock-z-lbl {
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: 0.15em;
+      color: #6b7280;
+    }
+    .mock-z-val {
+      font-family: var(--serif);
+      font-size: 36px;
+      line-height: 1;
+      margin-top: 4px;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .mock-z-pill {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 9px;
+      padding: 3px 8px;
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border-radius: 999px;
+    }
+
+    .mock-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      grid-auto-rows: 1fr;
+    }
+    .mock-metric { display: flex; flex-direction: column; }
+    .mock-mlbl {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: #6b7280;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .mock-mval {
+      font-family: var(--serif);
+      font-size: 24px;
+      line-height: 1;
+      margin: 4px 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .mock-spark { width: 100%; height: 24px; }
+
+    .mock-alerts { display: flex; flex-direction: column; gap: 8px; }
+    .mock-alert { display: flex; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #1a1e26; }
+    .mock-alert:last-child { border-bottom: none; }
+    .mock-alert-bar { width: 2px; min-width: 2px; border-radius: 1px; }
+    .mock-alert-tk {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .mock-alert-title { font-size: 11px; margin-top: 2px; color: #d1d5db; }
+
+    .mock-table { padding: 8px 14px; font-family: var(--mono); font-size: 10px; }
+    .mock-th, .mock-tr {
+      display: grid;
+      grid-template-columns: 60px 1fr 60px 70px 80px;
+      gap: 12px;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #1a1e26;
+    }
+    .mock-th { color: #6b7280; font-size: 9px; letter-spacing: 0.12em; }
+    .mock-tr { color: #d1d5db; font-size: 11px; }
+    .mock-tk {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border: 1px solid;
+      border-radius: 4px;
+      text-align: center;
+      width: fit-content;
+    }
+    .mock-cn { font-family: var(--sans); }
+    .mock-spark-sm { width: 70px; height: 18px; }
+
+    /* ───── LIVE STATS ───── */
+    .stats {
+      padding: 100px 24px;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      padding: 36px 28px;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val {
+      font-family: var(--serif);
+      font-size: clamp(40px, 5vw, 60px);
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--fg);
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 14px;
+    }
+    .stat-lbl {
+      font-size: 14px;
+      color: var(--fg);
+      font-weight: 500;
+    }
+    .stat-sub {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--fg-faint);
+      margin-top: 6px;
+    }
+
+    /* ───── FADE IN ───── */
+    .fadein {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1), transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .fadein.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ───── FEATURES ───── */
+    .features {
+      padding: 100px 24px;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .feature-card {
+      padding: 28px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: all 240ms cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+      overflow: hidden;
+      height: 100%;
+    }
+    .feature-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 240ms ease;
+    }
+    .feature-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 44px; height: 44px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-soft);
+      color: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+    .feature-title {
+      font-family: var(--sans);
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 10px;
+      color: var(--fg);
+    }
+    .feature-desc {
+      font-size: 14px;
+      color: var(--fg-dim);
+      line-height: 1.55;
+      margin: 0 0 18px;
+    }
+    .feature-bullets {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .feature-bullets li {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--fg-faint);
+      padding-left: 16px;
+      position: relative;
+    }
+    .feature-bullets li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+
+    /* ───── HOW IT WORKS ───── */
+    .how {
+      padding: 100px 24px;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .how-step {
+      padding: 32px 26px;
+      background: var(--bg-card);
+      transition: background 240ms ease;
+      height: 100%;
+    }
+    .how-step:hover { background: var(--bg-elev); }
+    .how-num {
+      font-family: var(--serif);
+      font-size: 48px;
+      font-style: italic;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 18px;
+    }
+    .how-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 8px;
+    }
+    .how-desc {
+      font-size: 14px;
+      color: var(--fg-dim);
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    /* ───── CASES STRIP ───── */
+    .cases-section {
+      padding: 100px 24px;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .cases-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .case-card {
+      padding: 22px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: all 240ms ease;
+      height: 100%;
+    }
+    .case-card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+    .case-card-year {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--fg-faint);
+      letter-spacing: 0.1em;
+    }
+    .case-card-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 6px 0 4px;
+      letter-spacing: -0.01em;
+    }
+    .case-card-debt {
+      font-size: 12px;
+      color: var(--fg-dim);
+      margin-bottom: 16px;
+    }
+    .case-card-debt strong { color: var(--fg); font-family: var(--mono); font-weight: 600; }
+    .case-card-bar {
+      height: 4px;
+      background: var(--bg-elev-2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .case-card-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ef4444, #f59e0b);
+      transition: width 1000ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .case-card-rec {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--fg-faint);
+      margin-top: 8px;
+    }
+    .case-card-rec span { color: var(--fg); font-weight: 600; }
+
+    /* ───── CTA SECTION ───── */
+    .cta-section {
+      padding: 120px 24px;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .cta-inner {
+      position: relative;
+      text-align: center;
+      padding: 80px 40px;
+      border: 1px solid var(--border-strong);
+      border-radius: 24px;
+      background: linear-gradient(180deg, var(--bg-elev), var(--bg-card));
+      overflow: hidden;
+    }
+    .cta-glow {
+      position: absolute;
+      top: -100px; left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle at center, var(--accent-glow), transparent 60%);
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .cta-title {
+      position: relative;
+      font-family: var(--serif);
+      font-size: clamp(40px, 6vw, 64px);
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin: 18px 0;
+      text-wrap: balance;
+    }
+    .cta-sub {
+      position: relative;
+      color: var(--fg-dim);
+      font-size: 17px;
+      max-width: 540px;
+      margin: 0 auto 32px;
+      text-wrap: pretty;
+    }
+    .cta-buttons {
+      position: relative;
+      display: flex; justify-content: center; gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ───── FOOTER ───── */
+    .footer {
+      padding: 60px 24px 30px;
+      max-width: 1240px;
+      margin: 0 auto;
+      border-top: 1px solid var(--border);
+    }
+    .footer-inner {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 40px;
+      padding-bottom: 40px;
+    }
+    .footer-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .footer-cols {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .footer-cols > div { display: flex; flex-direction: column; gap: 8px; }
+    .footer-col-head {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--fg-faint);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .footer-cols a {
+      font-size: 13px;
+      color: var(--fg-dim);
+      transition: color 160ms ease;
+    }
+    .footer-cols a:hover { color: var(--fg); }
+    .footer-bottom {
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--fg-faint);
+    }
+    .footer-status { display: flex; align-items: center; gap: 6px; color: #22c55e; }
+    .footer-status .live-dot { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+
+    /* responsive */
+    @media (max-width: 960px) {
+      .nav-links { display: none; }
+      .feature-grid, .how-grid, .cases-grid, .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .mock-hero { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr; }
+      .footer-cols { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .feature-grid, .how-grid, .cases-grid, .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      .preview-body { min-height: auto; }
+      .mock { grid-template-columns: 1fr; }
+      .mock-side { display: none; }
+    }
   </style>
 </head>
 <body>
-
-<div id="root"></div>
-<div id="toasts"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<script type="text/babel">
-const { useState, useEffect, useRef, useMemo } = React;
-
-// ─── helpers ────────────────────────────────────────────────────────────────
-function riskCls(score) {
-  if (score === null || score === undefined) return "none";
-  if (score >= 66) return "high";
-  if (score >= 33) return "med";
-  return "low";
-}
-function riskColor(cls) {
-  return {high:"var(--risk-high)",med:"var(--risk-med)",low:"var(--risk-low)",none:"var(--fg3)"}[cls]||"var(--fg3)";
-}
-function toast(msg, type="ok") {
-  const el = document.createElement("div");
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  document.getElementById("toasts").appendChild(el);
-  setTimeout(()=>el.remove(), 3500);
-}
-async function apiFetch(path, opts) {
-  const r = await fetch(path, opts);
-  if (!r.ok) {
-    const e = await r.json().catch(()=>({detail:r.statusText}));
-    throw new Error(e.detail||r.statusText);
-  }
-  return r.json();
-}
-
-// ─── DonutChart ──────────────────────────────────────────────────────────────
-function DonutChart({ high, med, low, none }) {
-  const ref = useRef(null);
-  const chartRef = useRef(null);
-  useEffect(()=>{
-    if (chartRef.current) chartRef.current.destroy();
-    chartRef.current = new Chart(ref.current, {
-      type:"doughnut",
-      data:{
-        labels:["Risc mare","Risc mediu","Risc mic","Neevaluat"],
-        datasets:[{data:[high,med,low,none],
-          backgroundColor:["#ef4444","#f59e0b","#22c55e","#334155"],
-          borderColor:"transparent",borderWidth:0,hoverOffset:4}],
-      },
-      options:{cutout:"72%",plugins:{legend:{display:false},tooltip:{callbacks:{
-        label:ctx=>{const t=high+med+low+none;return ` ${ctx.label}: ${ctx.raw} (${t?((ctx.raw/t)*100).toFixed(0):0}%)`;}
-      }}},animation:{duration:500}},
-    });
-    return ()=>chartRef.current?.destroy();
-  },[high,med,low,none]);
-
-  const total = high+med+low+none;
-  return (
-    <div className="donut-wrap">
-      <div style={{position:"relative",width:110,height:110,flexShrink:0}}>
-        <canvas ref={ref} width={110} height={110}/>
-        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-          <div style={{fontSize:20,fontWeight:800,fontFamily:"var(--mono)"}}>{total}</div>
-          <div style={{fontSize:9,color:"var(--fg3)"}}>companii</div>
-        </div>
-      </div>
-      <div className="donut-legend">
-        {[["high","Risc mare",high],["med","Risc mediu",med],["low","Risc mic",low],["none","Neevaluat",none]].map(([cls,lbl,v])=>(
-          <div key={cls} className="leg-item">
-            <div className="leg-dot" style={{background:riskColor(cls)}}/>
-            <span className="leg-label">{lbl}</span>
-            <span className="leg-val" style={{color:riskColor(cls)}}>{v}</span>
-            <span className="leg-pct">{total?`${((v/total)*100).toFixed(0)}%`:""}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── FeatureImportance ───────────────────────────────────────────────────────
-const FI_NAMES = {
-  debt_ratio:"Rata datorii",net_profit_margin:"Marja profit net",
-  current_ratio:"Lichiditate curentă",return_on_assets:"ROA",
-  quick_ratio:"Lichiditate rapidă",debt_to_equity:"Datorii/Capital",
-  working_capital_ratio:"Capital circulant",return_on_equity:"ROE",
-  interest_coverage:"Acoperire dobânzi",asset_turnover:"Rotație active",
-};
-function FeatureImportance({ features }) {
-  if (!features||!Object.keys(features).length)
-    return <div style={{color:"var(--fg3)",fontSize:12,padding:"20px 0"}}>Model neantrenat — mergi la Setări.</div>;
-  const sorted = Object.entries(features).sort((a,b)=>b[1]-a[1]);
-  const max = sorted[0][1];
-  return (
-    <div style={{paddingTop:4}}>
-      {sorted.map(([k,v])=>(
-        <div key={k} className="fi-row">
-          <div className="fi-label">{FI_NAMES[k]||k}</div>
-          <div className="fi-bar-bg"><div className="fi-bar-fill" style={{width:`${(v/max)*100}%`}}/></div>
-          <div className="fi-val">{v.toFixed(1)}%</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── ScoreBar ────────────────────────────────────────────────────────────────
-function ScoreBar({ score }) {
-  if (score===null||score===undefined) return <span style={{color:"var(--fg3)"}}>—</span>;
-  const color = riskColor(riskCls(score));
-  return (
-    <div className="score-bar-wrap">
-      <div className="score-bar-bg">
-        <div className="score-bar-fill" style={{width:`${score}%`,background:color}}/>
-      </div>
-      <div className="score-num" style={{color}}>{score.toFixed(0)}</div>
-    </div>
-  );
-}
-
-// ─── CompanyModal ────────────────────────────────────────────────────────────
-function CompanyModal({ company, onClose }) {
-  if (!company) return null;
-  const cls = riskCls(company.risk_score);
-  const ind = company.indicators||{};
-  const rows = [
-    ["Lichiditate curentă", ind.current_ratio?.toFixed(3)],
-    ["Lichiditate rapidă",  ind.quick_ratio?.toFixed(3)],
-    ["Rata datorii",        ind.debt_ratio?.toFixed(3)],
-    ["Datorii/Capital",     ind.debt_to_equity?.toFixed(3)],
-    ["Marja profit",        ind.net_profit_margin!=null?`${ind.net_profit_margin.toFixed(2)}%`:null],
-    ["ROA",                 ind.return_on_assets!=null?`${ind.return_on_assets.toFixed(2)}%`:null],
-    ["ROE",                 ind.return_on_equity!=null?`${ind.return_on_equity.toFixed(2)}%`:null],
-    ["Rotație active",      ind.asset_turnover?.toFixed(3)],
-    ["Capital circulant",   ind.working_capital_ratio?.toFixed(3)],
-    ["Acoperire dobânzi",   ind.interest_coverage?.toFixed(2)],
-  ];
-  return (
-    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal">
-        <div className="modal-head">
-          <div>
-            <div className="modal-title">{company.company_name}</div>
-            <div className="modal-sub">An: {company.year} · Sector: {company.sector||"—"}</div>
-          </div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body">
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}}>
-            <span className={`risk-badge ${cls}`}>
-              <span className="dot"/>
-              {company.risk_label||{high:"Risc mare",med:"Risc mediu",low:"Risc mic",none:"Neevaluat"}[cls]}
-            </span>
-            {company.risk_score!=null&&(
-              <span style={{fontFamily:"var(--mono)",fontSize:13}}>
-                Scor: <strong style={{color:riskColor(cls)}}>{company.risk_score.toFixed(1)}</strong>/100
-              </span>
-            )}
-            {company.is_bankrupt===1&&<span style={{fontSize:11,color:"var(--risk-high)"}}>⚠ Falimentat</span>}
-            {company.is_bankrupt===0&&<span style={{fontSize:11,color:"var(--risk-low)"}}>✓ Activ</span>}
-          </div>
-          <div className="detail-grid">
-            {rows.map(([k,v])=>(
-              <div key={k} className="detail-item">
-                <div className="detail-key">{k}</div>
-                <div className="detail-val">{v??<span style={{color:"var(--fg3)"}}>—</span>}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Dashboard ───────────────────────────────────────────────────────────────
-function Dashboard({ searchProp }) {
-  const [stats, setStats]   = useState(null);
-  const [companies, setCos] = useState([]);
-  const [modelInfo, setMI]  = useState(null);
-  const [riskFilter, setRF] = useState("all");
-  const [sortKey, setSK]    = useState("risk_score");
-  const [sortDir, setSD]    = useState("desc");
-  const [selected, setSel]  = useState(null);
-  const [loading, setLoad]  = useState(true);
-
-  async function load() {
-    setLoad(true);
-    try {
-      const [s,c,m] = await Promise.all([
-        apiFetch("/api/companies/stats"),
-        apiFetch("/api/companies?limit=500"),
-        apiFetch("/api/ml/model-info"),
-      ]);
-      setStats(s); setCos(c); setMI(m);
-    } catch(e) { toast(e.message,"err"); }
-    setLoad(false);
-  }
-  useEffect(()=>{load();},[]);
-
-  const filtered = useMemo(()=>{
-    let list = companies.filter(c=>{
-      if (searchProp && !c.company_name.toLowerCase().includes(searchProp.toLowerCase())) return false;
-      if (riskFilter!=="all" && riskCls(c.risk_score)!==riskFilter) return false;
-      return true;
-    });
-    return [...list].sort((a,b)=>{
-      let av=a[sortKey],bv=b[sortKey];
-      if (av==null) av=sortDir==="asc"?Infinity:-Infinity;
-      if (bv==null) bv=sortDir==="asc"?Infinity:-Infinity;
-      return sortDir==="asc"?(av>bv?1:-1):(av<bv?1:-1);
-    });
-  },[companies,searchProp,riskFilter,sortKey,sortDir]);
-
-  function toggleSort(k){
-    if (sortKey===k) setSD(d=>d==="asc"?"desc":"asc");
-    else {setSK(k);setSD("desc");}
-  }
-
-  const highN = companies.filter(c=>riskCls(c.risk_score)==="high").length;
-  const medN  = companies.filter(c=>riskCls(c.risk_score)==="med").length;
-  const lowN  = companies.filter(c=>riskCls(c.risk_score)==="low").length;
-  const noneN = companies.filter(c=>riskCls(c.risk_score)==="none").length;
-
-  const cols = [
-    {k:"company_name",l:"Companie",sort:true},
-    {k:"sector",l:"Sector",sort:false},
-    {k:"year",l:"An",sort:true},
-    {k:"risk_score",l:"Scor Risc",sort:true},
-    {k:"risk_label",l:"Nivel",sort:false},
-    {k:"debt_ratio_col",l:"Rata Datorii",sort:false},
-    {k:"current_ratio_col",l:"Lichiditate",sort:false},
-    {k:"is_bankrupt",l:"Faliment",sort:false},
-  ];
-
-  return (
-    <>
-      <div className="kpi-row">
-        {[
-          {cls:"kpi-acc",label:"Total companii",val:stats?.total??"—",sub:"în baza de date"},
-          {cls:"kpi-high",label:"Risc mare",val:highN,sub:"scor ≥ 66/100"},
-          {cls:"kpi-med",label:"Risc mediu",val:medN,sub:"scor 33–65/100"},
-          {cls:"kpi-low",label:"Risc mic",val:lowN,sub:"scor < 33/100"},
-          {cls:"",label:"Scor mediu",val:stats?.avg_risk_score??"—",sub:"din 100 · Random Forest"},
-        ].map((t,i)=>(
-          <div key={i} className={`kpi-tile ${t.cls}`}>
-            <div className="kpi-label">{t.label}</div>
-            <div className="kpi-value">{t.val}</div>
-            <div className="kpi-sub">{t.sub}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="charts-row">
-        <div className="card">
-          <div className="card-head">
-            <div><div className="card-title">Distribuție Risc</div>
-            <div className="card-sub">{companies.length} companii monitorizate</div></div>
-          </div>
-          <div className="card-body">
-            <DonutChart high={highN} med={medN} low={lowN} none={noneN}/>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-head">
-            <div><div className="card-title">Importanța Indicatorilor</div>
-            <div className="card-sub">Random Forest · {modelInfo?.model_trained?"model antrenat":"neantrenat"}</div></div>
-          </div>
-          <div className="card-body">
-            <FeatureImportance features={modelInfo?.feature_importance}/>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-head">
-            <div><div className="card-title">Status Model ML</div>
-            <div className="card-sub">Random Forest Classifier · 200 arbori</div></div>
-          </div>
-          <div className="card-body">
-            {modelInfo?.model_trained ? (
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                {[
-                  ["Algoritm","Random Forest"],
-                  ["Arbori",modelInfo.n_estimators||200],
-                  ["Indicatori",Object.keys(modelInfo.feature_importance||{}).length],
-                  ["Status","✓ Antrenat"],
-                ].map(([k,v])=>(
-                  <div key={k} style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px"}}>
-                    <div style={{fontSize:9,color:"var(--fg3)",textTransform:"uppercase",letterSpacing:".5px",fontFamily:"var(--mono)",marginBottom:3}}>{k}</div>
-                    <div style={{fontSize:12,fontWeight:600,fontFamily:"var(--mono)"}}>{String(v)}</div>
-                  </div>
-                ))}
-                <div style={{gridColumn:"1/-1",fontSize:11,color:"var(--fg3)",marginTop:4}}>
-                  Mergi la <strong style={{color:"var(--accent)"}}>Setări</strong> pentru reantrenare sau re-scorificare.
-                </div>
-              </div>
-            ) : (
-              <div style={{color:"var(--fg3)",fontSize:12,lineHeight:1.7}}>
-                <div style={{marginBottom:8}}>Modelul nu este antrenat.</div>
-                <div>Importă date cu <code style={{color:"var(--accent)",fontFamily:"var(--mono)"}}>is_bankrupt</code> și antrenează din <strong style={{color:"var(--fg)"}}>Setări</strong>.</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="section">
-        <div className="section-head">
-          <div className="section-title">Companii ({filtered.length})</div>
-          <div className="section-actions">
-            <div className="filter-pills">
-              {[["all","Toate"],["low","Mic"],["med","Mediu"],["high","Mare"]].map(([k,l])=>(
-                <button key={k} className={`pill ${riskFilter===k?"active-"+k:""}`}
-                  onClick={()=>setRF(k)}>{l}</button>
-              ))}
-            </div>
-            <button className="btn btn-ghost" style={{fontSize:11,padding:"5px 10px"}} onClick={load}>↺</button>
-          </div>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {cols.map(c=>(
-                  <th key={c.k} className={c.sort?"sortable":""} onClick={c.sort?()=>toggleSort(c.k):undefined}>
-                    {c.l}{sortKey===c.k?(sortDir==="asc"?" ↑":" ↓"):""}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={8} className="empty-state">Se încarcă…</td></tr>
-              ) : filtered.length===0 ? (
-                <tr><td colSpan={8} className="empty-state">Niciun rezultat</td></tr>
-              ) : filtered.map(c=>{
-                const cls=riskCls(c.risk_score);
-                const lbl={high:"Risc mare",med:"Risc mediu",low:"Risc mic",none:"Neevaluat"}[cls];
-                return (
-                  <tr key={c.id} onClick={()=>setSel(c)}>
-                    <td><span className="co-name">{c.company_name}</span></td>
-                    <td><span className="sector-tag">{c.sector||"—"}</span></td>
-                    <td style={{fontFamily:"var(--mono)",fontSize:11}}>{c.year}</td>
-                    <td><ScoreBar score={c.risk_score}/></td>
-                    <td>
-                      {c.risk_label
-                        ? <span className={`risk-badge ${cls}`}><span className="dot"/>{c.risk_label}</span>
-                        : <span style={{color:"var(--fg3)",fontSize:11}}>—</span>}
-                    </td>
-                    <td className="num" style={{fontFamily:"var(--mono)",fontSize:11}}>
-                      {c.indicators?.debt_ratio?.toFixed(3)??"—"}
-                    </td>
-                    <td className="num" style={{fontFamily:"var(--mono)",fontSize:11}}>
-                      {c.indicators?.current_ratio?.toFixed(3)??"—"}
-                    </td>
-                    <td>
-                      {c.is_bankrupt===1?<span style={{color:"var(--risk-high)",fontSize:11}}>⚠ Da</span>
-                      :c.is_bankrupt===0?<span style={{color:"var(--risk-low)",fontSize:11}}>✓ Nu</span>
-                      :<span style={{color:"var(--fg3)",fontSize:11}}>—</span>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {selected&&<CompanyModal company={selected} onClose={()=>setSel(null)}/>}
-    </>
-  );
-}
-
-// ─── Sectors ─────────────────────────────────────────────────────────────────
-function Sectors() {
-  const [data,setData]=useState([]);
-  const [loading,setLoad]=useState(true);
-  useEffect(()=>{
-    apiFetch("/api/companies/sector-stats")
-      .then(setData).catch(e=>toast(e.message,"err"))
-      .finally(()=>setLoad(false));
-  },[]);
-
-  return (
-    <div className="section">
-      <div className="section-head">
-        <div className="section-title">Analiză Sectoare ({data.length})</div>
-        <div style={{marginLeft:"auto",fontSize:10,color:"var(--fg3)"}}>date agregate din MongoDB</div>
-      </div>
-      {loading ? (
-        <div className="empty-state">Se încarcă…</div>
-      ) : data.length===0 ? (
-        <div className="empty-state">Nu există date sectoriale. Importează un CSV cu coloana <code>sector</code>.</div>
-      ) : (
-        <div className="sector-grid">
-          {data.map(s=>{
-            const score=s.avg_risk_score;
-            const cls=score!=null?riskCls(score):"none";
-            return (
-              <div key={s.sector} className="sector-card">
-                <div className="sector-name">{s.sector}</div>
-                <div className="sector-bar">
-                  <div className="sector-bar-fill"
-                    style={{width:`${score!=null?score:0}%`,background:riskColor(cls)}}/>
-                </div>
-                <div className="sector-stat-grid">
-                  {[
-                    ["Companii",s.count],
-                    ["Scor mediu",score!=null?score.toFixed(1):"—"],
-                    ["Risc înalt",s.high_risk],
-                    ["Marja profit",s.avg_npm!=null?`${s.avg_npm.toFixed(1)}%`:"—"],
-                    ["Lichiditate",s.avg_current_ratio!=null?s.avg_current_ratio.toFixed(2):"—"],
-                    ["Rata datorii",s.avg_debt_ratio!=null?s.avg_debt_ratio.toFixed(2):"—"],
-                  ].map(([k,v])=>(
-                    <div key={k} className="sector-stat">
-                      <div className="sector-stat-label">{k}</div>
-                      <div className="sector-stat-val">{v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Settings ─────────────────────────────────────────────────────────────────
-function Settings() {
-  const [training,setTraining]=useState(false);
-  const [rescoring,setRescoring]=useState(false);
-  const [metrics,setMetrics]=useState(null);
-
-  async function trainModel() {
-    setTraining(true);setMetrics(null);
-    try {
-      const r=await apiFetch("/api/ml/train",{method:"POST"});
-      setMetrics(r);toast("Model antrenat cu succes!","ok");
-    } catch(e){toast(e.message,"err");}
-    setTraining(false);
-  }
-  async function rescoreAll() {
-    setRescoring(true);
-    try {
-      const r=await apiFetch("/api/ml/predict-all",{method:"POST"});
-      toast(`${r.updated} companii re-scorificate.`,"ok");
-    } catch(e){toast(e.message,"err");}
-    setRescoring(false);
-  }
-
-  const SOURCES = [
-    {icon:"📈",name:"BVB — Bursa de Valori București",
-     desc:"Situații financiare anuale pentru companiile listate. Accesează fișa companiei → Documente → Situații financiare (PDF/XBRL).",
-     link:"https://www.bvb.ro/FinancialInstruments/Details/FinancialInstrumentsDetails.aspx",label:"bvb.ro →"},
-    {icon:"🏛",name:"data.gov.ro — Open Data",
-     desc:"Seturi de date publice guvernamentale, statistici INS pe firme și sectoare. Descărcare CSV directă.",
-     link:"https://data.gov.ro/dataset?tags=companii",label:"data.gov.ro →"},
-    {icon:"📊",name:"INS — Institutul Național de Statistică",
-     desc:"Statistici financiare agregate pe sectoare CAEN, exportabile XLS/CSV din baza Tempo Online.",
-     link:"https://statistici.insse.ro/shop/",label:"insse.ro →"},
-    {icon:"⚖️",name:"ONRC — Registrul Comerțului",
-     desc:"Date firme înregistrate în România: bilanțuri depuse, stare juridică, CUI.",
-     link:"https://portal.onrc.ro/",label:"onrc.ro →"},
-    {icon:"💳",name:"Ministerul Finanțelor",
-     desc:"Situații financiare anuale ale firmelor cu CA > 1M RON. Format XML descărcabil.",
-     link:"https://mfinante.gov.ro/transparency",label:"mfinante.gov.ro →"},
-    {icon:"🌍",name:"Eurostat România",
-     desc:"Indicatori macroeconomici și sectoriali la nivel european — utili pentru benchmark.",
-     link:"https://ec.europa.eu/eurostat/databrowser/",label:"eurostat.ec.europa.eu →"},
-    {icon:"💼",name:"termene.ro (comercial)",
-     desc:"Export CSV complet pentru orice firmă RO — cel mai complet pentru bulk. Acces pe abonament.",
-     link:"https://termene.ro",label:"termene.ro →"},
-  ];
-
-  return (
-    <>
-      <div className="settings-panel">
-        <div className="settings-title">🧠 Model Machine Learning</div>
-        <div className="settings-desc">
-          Algoritmul <strong>Random Forest</strong> (200 arbori) antrenat pe indicatorii financiari din baza de date.
-          Necesită cel puțin 20 companii cu coloana <code style={{fontFamily:"var(--mono)",color:"var(--accent)"}}>is_bankrupt</code>.
-        </div>
-        <div style={{display:"flex",gap:10}}>
-          <button className="btn btn-primary" onClick={trainModel} disabled={training||rescoring}>
-            {training?"Se antrenează…":"🧠 Antrenează Model"}
-          </button>
-          <button className="btn btn-ghost" onClick={rescoreAll} disabled={training||rescoring}>
-            {rescoring?"Se calculează…":"🔮 Re-scorifică Toate"}
-          </button>
-        </div>
-        {metrics&&(
-          <div className="settings-metrics">
-            {[
-              ["Acuratețe",`${(metrics.accuracy*100).toFixed(1)}%`],
-              ["Precizie",`${(metrics.precision*100).toFixed(1)}%`],
-              ["Recall",`${(metrics.recall*100).toFixed(1)}%`],
-              ["F1-Score",`${(metrics.f1_score*100).toFixed(1)}%`],
-              ["AUC-ROC",`${(metrics.roc_auc*100).toFixed(1)}%`],
-              ["Eșantioane",metrics.n_samples],
-            ].map(([k,v])=>(
-              <div key={k} className="metric-card">
-                <div className="metric-key">{k}</div>
-                <div className="metric-val">{v}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="settings-panel">
-        <div className="settings-title">📂 Import Date (CLI)</div>
-        <div className="settings-desc">
-          Importul datelor în MongoDB se face exclusiv din terminal cu scriptul
-          <code style={{fontFamily:"var(--mono)",color:"var(--accent)",margin:"0 4px"}}>scripts/import_csv.py</code>.
-          Interfața afișează doar statistici și companii — gestionarea datelor e la nivel de server.
-        </div>
-        <div className="code-block">
-          <div><span className="code-comment"># Import simplu</span></div>
-          <div>python scripts/import_csv.py data/sample_data.csv</div>
-          <div style={{marginTop:8}}><span className="code-comment"># Șterge tot și reimportă</span></div>
-          <div>python scripts/import_csv.py data/sample_data.csv --clear</div>
-          <div style={{marginTop:8}}><span className="code-comment"># MongoDB extern</span></div>
-          <div>python scripts/import_csv.py myfile.csv --db-url mongodb://host:27017</div>
-          <div style={{marginTop:8}}><span className="code-comment"># Simulare (dry-run)</span></div>
-          <div>python scripts/import_csv.py myfile.csv --dry-run</div>
-        </div>
-        <div style={{marginTop:12,fontSize:11,color:"var(--fg3)"}}>
-          Coloane necesare: <code style={{fontFamily:"var(--mono)",color:"var(--accent2)"}}>
-            company_name, year, current_ratio, quick_ratio, debt_ratio, debt_to_equity,
-            net_profit_margin, return_on_assets, return_on_equity, asset_turnover,
-            working_capital_ratio, interest_coverage
-          </code>
-          <span style={{color:"var(--fg3)"}}> · Opțional: </span>
-          <code style={{fontFamily:"var(--mono)",color:"var(--accent2)"}}>is_bankrupt (0/1), sector</code>
-        </div>
-      </div>
-
-      <div className="settings-panel">
-        <div className="settings-title">🇷🇴 Surse Date Oficiale România</div>
-        <div className="settings-desc">
-          Date financiare reale de la companii românești — surse publice și comerciale cu posibilitate de export CSV.
-        </div>
-        <div className="sources-list">
-          {SOURCES.map(s=>(
-            <div key={s.name} className="source-item">
-              <div className="source-icon">{s.icon}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div className="source-name">{s.name}</div>
-                <div className="source-desc">{s.desc}</div>
-              </div>
-              <a href={s.link} target="_blank" rel="noopener" className="source-link">{s.label}</a>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ─── App ──────────────────────────────────────────────────────────────────────
-function App() {
-  const [view,setView]=useState("dashboard");
-  const [search,setSearch]=useState("");
-
-  const NAV=[
-    {id:"dashboard",label:"Dashboard",icon:"▣"},
-    {id:"sectors",  label:"Sectoare", icon:"≡"},
-    {id:"settings", label:"Setări",   icon:"⚙"},
-  ];
-
-  return (
-    <>
-      <div className="sidebar">
-        <div className="brand">
-          <div className="brand-logo">Bankrupt<span className="iq">IQ</span></div>
-          <div className="brand-sub">v2 · risk analyzer</div>
-        </div>
-        <nav className="nav">
-          {NAV.map(it=>(
-            <button key={it.id} className={`nav-item${view===it.id?" active":""}`}
-              onClick={()=>{setView(it.id);setSearch("");}}>
-              <span className="icon">{it.icon}</span>
-              <span>{it.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <span className="status-dot"/>
-          <div className="status-text">MongoDB · FastAPI</div>
-        </div>
-      </div>
-
-      <div className="main">
-        <div className="topbar">
-          <div className="topbar-title">{NAV.find(n=>n.id===view)?.label}</div>
-          <div className="topbar-spacer"/>
-          {view==="dashboard"&&(
-            <div className="search-wrap">
-              <span className="search-icon">⌕</span>
-              <input className="search-input" placeholder="Caută companie…"
-                value={search} onChange={e=>setSearch(e.target.value)}/>
-            </div>
-          )}
-          <a href="/docs" target="_blank"
-            style={{color:"var(--fg3)",fontSize:11,textDecoration:"none",marginLeft:8}}>
-            📖 API
-          </a>
-        </div>
-        <div className="scroll-area">
-          {view==="dashboard"&&<Dashboard key="dash" searchProp={search}/>}
-          {view==="sectors"  &&<Sectors/>}
-          {view==="settings" &&<Settings/>}
-        </div>
-      </div>
-    </>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-</script>
+  <div id="root"></div>
+  <script type="text/babel" src="landing/landing.jsx"></script>
 </body>
 </html>

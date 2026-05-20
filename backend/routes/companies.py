@@ -16,6 +16,7 @@ def _doc_to_out(doc: dict) -> dict:
         "id": str(doc["_id"]),
         "company_name": doc["company_name"],
         "year": doc["year"],
+        "sector": doc.get("sector"),
         "risk_score": doc.get("risk_score"),
         "risk_label": doc.get("risk_label"),
         "is_bankrupt": doc.get("is_bankrupt"),
