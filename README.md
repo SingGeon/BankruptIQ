@@ -1,164 +1,303 @@
-# ⚡ BankruptIQ — Sistem de Analiză a Riscului de Faliment
+# BankruptIQ — Sistem de Analiză a Riscului de Faliment
 
-Aplicație completă pentru predicția riscului de faliment al întreprinderilor, folosind Machine Learning (Random Forest), FastAPI, MongoDB și un dashboard modern în browser.
+Platformă completă de monitorizare și predicție a riscului de faliment pentru companii românești. Combină **Altman Z-Score**, **Ohlson O-Score** și un model **Random Forest** antrenat pe date reale, cu un dashboard interactiv care acoperă zeci de mii de companii.
 
 ---
 
-## 🏗 Arhitectură
+## Ce face aplicația
+
+BankruptIQ analizează indicatorii financiari ai companiilor și calculează în timp real probabilitatea de faliment pe 12 și 36 de luni. Sistemul procesează date istorice (mai mulți ani de exerciții financiare), detectează semnale de alertă timpurie și prezintă totul într-un dashboard glassmorphism cu grafice live.
+
+**Funcționalități principale:**
+
+- **Dashboard live** — Z-Score animat, metrici pe perioade 1Y/3Y/5Y, glob 3D interactiv cu companiile colorate după risc
+- **Profil companie** — evoluție Z-Score pe 60 luni, predicție ML 12L/36L, comparație cu media sectorului, benchmark indicatori
+- **Comparator** — selectezi până la 4 companii din lista completă, grafice Z-Score suprapuse, tabel metrici cu ★ pe cel mai bun
+- **Statistici macro** — indicatori BNR/INSSE, timeline falimente lunare ONRC/UNPIR, distribuție Z-Score, matrice trimestrială sectorială
+- **Alerte** — generate automat pentru companii cu semnale de distress (levier ridicat, marjă negativă, current ratio sub 1)
+- **Scoruri triple** — Altman Z-Score (formula privată 1983), Ohlson O-Score, Random Forest ML blended
+
+---
+
+## Arhitectură
 
 ```
 BankruptIQ/
 ├── backend/
-│   ├── main.py              # FastAPI app (CORS, routere, fișiere statice)
-│   ├── database.py          # Conexiune MongoDB async (motor)
-│   ├── models.py            # Modele Pydantic (validare date)
+│   ├── main.py                  # FastAPI: CORS, routere, fișiere statice, indexuri MongoDB
+│   ├── database.py              # Conexiune MongoDB async (motor)
+│   ├── models.py                # Modele Pydantic
 │   ├── routes/
-│   │   ├── companies.py     # CRUD companii + predicție individuală
-│   │   ├── upload.py        # Import CSV cu validare
-│   │   └── ml_routes.py     # Antrenare, predicție, info model
+│   │   ├── companies.py         # CRUD + /unique + /aggregate-stats + /forecast
+│   │   ├── ml_routes.py         # Antrenare, predicție, forecast 12L/36L
+│   │   ├── upload.py            # Import CSV cu validare
+│   │   ├── alerts.py            # Generare și listare alerte
+│   │   └── macro.py             # Indicatori macro BNR/INSSE
 │   ├── ml/
-│   │   ├── features.py      # Definiție coloane și descrieri
-│   │   ├── trainer.py       # Pipeline Random Forest + metrici
-│   │   └── predictor.py     # Scoring (0-100) + etichetare risc
+│   │   ├── features.py          # Coloanele folosite de model
+│   │   ├── trainer.py           # Pipeline Random Forest + metrici AUC/F1
+│   │   └── predictor.py         # Scor 0-100 + etichetare risc
 │   └── utils/
-│       ├── logger.py        # Logging structurat cu timestamps
-│       └── validators.py    # Validare CSV (coloane, tipuri, intervale)
+│       ├── logger.py            # Logging structurat
+│       └── validators.py        # Validare CSV
 ├── frontend/
-│   ├── index.html           # Dashboard SPA
-│   ├── css/style.css        # Design dark-mode modern
-│   └── js/app.js            # Logica UI + Chart.js
-├── data/
-│   ├── sample_data.csv      # 80 companii de exemplu
-│   └── generate_data.py     # Script generator date
-├── models/                  # Modele ML serializate (joblib)
+│   ├── dashboard.html           # Dashboard SPA (entry point)
+│   ├── index.html               # Landing page marketing
+│   ├── landing/
+│   │   └── landing.jsx          # Pagina principală React
+│   ├── src/
+│   │   ├── app.jsx              # Componenta App + navigare + tabel companii
+│   │   ├── data.jsx             # Layer date: fetch API → window.BIQ_DATA
+│   │   ├── theme.jsx            # Sistem teme: glassmorphism/terminal/fintech/editorial
+│   │   ├── hero.jsx             # Hero Command Bridge (Z-Score animat live)
+│   │   ├── charts.jsx           # LineChart, Sparkline, Donut, HeatmapMatrix etc.
+│   │   ├── compare.jsx          # Comparator + ComparatorPage cu picker
+│   │   ├── profile.jsx          # Drawer profil companie + predicție ML
+│   │   ├── stats.jsx            # Pagina Statistici (macro, falimente, sectoare)
+│   │   ├── globe.jsx            # Glob 3D interactiv cu companii
+│   │   └── loading.jsx          # Loading screen animat (glob 3D + progress)
+│   └── tweaks-panel.jsx         # Panel configurare estetică (teme, densitate)
+├── data/                        # CSV-uri cu date financiare
+├── models/                      # Modele ML serializate (.pkl)
 ├── requirements.txt
-└── .env.example
+└── .env
+```
+
+> **Frontend fără build step** — Babel Standalone compilează JSX direct în browser. Nu e nevoie de npm, webpack sau vite. Totul se servește static prin FastAPI.
+
+---
+
+## Cerințe
+
+- **Python 3.11+**
+- **MongoDB** rulând local (sau MongoDB Atlas)
+
+### Instalare MongoDB pe Ubuntu/Debian
+
+```bash
+sudo apt install -y mongodb
+sudo systemctl start mongodb
+sudo systemctl enable mongodb
+```
+
+Verificare:
+```bash
+mongod --version
 ```
 
 ---
 
-## 🚀 Instalare și Rulare
-
-### 1. Cerințe preliminare
-
-- **Python 3.11+**
-- **MongoDB** (local sau Atlas)
-
-Instalare MongoDB local (Ubuntu/Debian):
-```bash
-sudo apt install -y mongodb
-sudo systemctl start mongodb
-```
-
-### 2. Clonare și setup
+## Instalare
 
 ```bash
-git clone <repo-url>
+# 1. Clonează repo-ul
+git clone https://github.com/SingGeon/BankruptIQ.git
 cd BankruptIQ
 
-# Mediu virtual (recomandat)
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+# 2. Creează mediu virtual
+python3 -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 
+# 3. Instalează dependențele
 pip install -r requirements.txt
 ```
 
-### 3. Configurare
+---
 
-```bash
-cp .env.example .env
-# Editeaza .env daca MongoDB e pe alt host/port
-```
+## Configurare
 
-Continut `.env`:
-```
+Creează fișierul `.env` în rădăcina proiectului:
+
+```env
 MONGODB_URL=mongodb://localhost:27017
 DATABASE_NAME=bankruptiq
 MODEL_PATH=models/bankruptcy_model.pkl
 LOG_LEVEL=INFO
 ```
 
-### 4. Pornire server
+---
+
+## Pornire
+
+**Rulează întotdeauna din rădăcina proiectului** (nu din subdirectoare):
 
 ```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+cd BankruptIQ
+source venv/bin/activate
+python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Deschide **http://localhost:8000** in browser.
+- **Dashboard:** `http://localhost:8000/dashboard`
+- **Landing page:** `http://localhost:8000`
+- **API docs (Swagger):** `http://localhost:8000/docs`
+
+> **Notă:** La pornire, sistemul creează automat indexuri MongoDB pe `company_name`, `risk_label` și `sector` pentru interogări rapide.
 
 ---
 
-## 📋 Flux de Utilizare
+## Import date
 
-1. **Import CSV** — trage `data/sample_data.csv` in zona de upload
-2. **Antrenare Model** — click "Antreneaza Model" (necesita coloane `is_bankrupt`)
-3. **Scoruri automate** — dupa antrenare, toate companiile primesc scor 0-100
-4. **Explorare** — cauta companii, vizualizeaza detalii, grafice
+### Format CSV
+
+Fișierul CSV trebuie să conțină coloanele:
+
+| Coloană | Tip | Descriere |
+|---------|-----|-----------|
+| `company_name` | string | Denumirea companiei |
+| `year` | int | Anul exercițiului financiar |
+| `sector` | string | Sectorul economic (ex: `Productie`, `IT_Telecom`) |
+| `current_ratio` | float | Active curente / Datorii curente |
+| `quick_ratio` | float | (Active curente − Stocuri) / Datorii curente |
+| `debt_ratio` | float | Total datorii / Total active (0–1) |
+| `debt_to_equity` | float | Total datorii / Capital propriu |
+| `net_profit_margin` | float | Profit net / Vânzări × 100 (%) |
+| `return_on_assets` | float | Profit net / Total active × 100 (%) |
+| `return_on_equity` | float | Profit net / Capital propriu × 100 (%) |
+| `asset_turnover` | float | Vânzări / Total active |
+| `working_capital_ratio` | float | (Active curente − Datorii curente) / Total active |
+| `interest_coverage` | float | EBIT / Cheltuieli cu dobânzile |
+| `is_bankrupt` | int | **Opțional** — 0 = sănătos, 1 = falimentat (necesar pentru antrenare ML) |
+| `risk_score` | float | **Opțional** — scor pre-calculat 0–100 |
+| `risk_label` | string | **Opțional** — `Risc mic` / `Risc mediu` / `Risc mare` |
+
+### Import prin interfață
+
+1. Pornește serverul
+2. Mergi la `http://localhost:8000/dashboard`
+3. Navigare → secțiunea **Upload** (sau folosește `/api/upload/csv`)
+
+### Import din linie de comandă
+
+```bash
+curl -X POST http://localhost:8000/api/upload/csv \
+  -F "file=@data/fisier.csv"
+```
 
 ---
 
-## 📊 Indicatori Financiari (Coloane CSV)
+## Antrenare model ML
 
-| Coloana | Descriere |
-|---------|-----------|
-| `company_name` | Denumirea companiei |
-| `year` | Anul datelor financiare |
-| `current_ratio` | Lichiditate curenta (active curente / datorii curente) |
-| `quick_ratio` | Lichiditate rapida (fara stocuri) |
-| `debt_ratio` | Rata datoriilor (total datorii / total active) |
-| `debt_to_equity` | Datorii / Capital propriu |
-| `net_profit_margin` | Marja profit net (%) |
-| `return_on_assets` | ROA — Rentabilitatea activelor (%) |
-| `return_on_equity` | ROE — Rentabilitatea capitalului propriu (%) |
-| `asset_turnover` | Rotatia activelor (vanzari / total active) |
-| `working_capital_ratio` | Fond de rulment / Total active |
-| `interest_coverage` | Acoperire dobanzi (EBIT / Cheltuieli dobanzi) |
-| `is_bankrupt` | **Optional** — 0 = sanatos, 1 = falimentat (pentru antrenare) |
+După importul datelor care conțin coloana `is_bankrupt`:
+
+```bash
+curl -X POST http://localhost:8000/api/ml/train
+```
+
+Sau din Python:
+
+```bash
+python -m backend.ml.trainer
+```
+
+Modelul antrenat se salvează automat la `models/bankruptcy_model.pkl`. După antrenare, toate companiile din baza de date primesc un scor actualizat.
+
+**Metrici returnate:** accuracy, precision, recall, F1, AUC-ROC, importanță variabile.
 
 ---
 
-## 🧠 Model Machine Learning
+## Cum funcționează scoring-ul
 
-### Algoritm: Random Forest
+### 1. Altman Z-Score (formula privată 1983)
 
-**De ce Random Forest?**
-- Gestioneaza relatii **neliniare** intre indicatori (tipic in date financiare)
-- **Robust la outlieri** — frecventi in bilanturile contabile
-- Ofera **importanta variabilelor** — interpretabilitate esentiala in finante
-- `class_weight='balanced'` compenseaza **dezechilibrul claselor** (rare falimente)
-- Superior Logistic Regression pentru pattern-uri complexe, fara tuning intensiv
-
-### Pipeline
 ```
-CSV → Imputare mediana → StandardScaler → RandomForest(200 arbori) → Probabilitate → Scor 0-100
+Z = 0.717×X1 + 0.847×X2 + 3.107×X3 + 0.420×X4 + 0.998×X5
 ```
 
-### Clasificare risc
-| Scor | Eticheta |
+| Variabilă | Semnificație |
+|-----------|-------------|
+| X1 | Capital circulant / Total active |
+| X2 | Profit reinvestit / Total active (aproximat din ROA) |
+| X3 | EBIT / Total active |
+| X4 | Capitalizare bursieră / Total datorii (aproximat) |
+| X5 | Vânzări / Total active |
+
+| Z-Score | Interpretare |
+|---------|-------------|
+| < 1.81 | **Zonă distress** — risc ridicat de faliment |
+| 1.81 – 2.99 | **Zonă gri** — incert, monitorizare activă |
+| > 2.99 | **Zonă sigură** — sănătos financiar |
+
+### 2. Ohlson O-Score
+
+Model probit cu 8 variabile financiare. Valori pozitive indică risc crescut.
+
+### 3. Random Forest ML
+
+Pipeline complet:
+```
+Date brute → Imputare mediană → StandardScaler → RandomForest(200 arbori) → Probabilitate → Scor 0–100
+```
+
+- `n_estimators=200`, `max_depth=8`, `class_weight='balanced'`
+- Scorul final (0–100) este probabilitatea de faliment multiplicată
+
+| Scor | Etichetă |
 |------|----------|
-| 0 - 32 | Risc mic |
-| 33 - 65 | Risc mediu |
-| 66 - 100 | Risc mare |
+| 0 – 32 | Risc mic |
+| 33 – 65 | Risc mediu |
+| 66 – 100 | Risc mare |
+
+### 4. Predicție 12L/36L
+
+Forecast cu tendință istorică + amortizare geometrică:
+- Tendința se calculează din istoricul anual al companiei (cel mai recent minus cel mai vechi)
+- Se aplică factor de amortizare 7%/lună — trendul scade în intensitate în timp
+- Rezultatul e convertit din scor risc (0–100%) la Z-Score echivalent pentru vizualizare
 
 ---
 
-## 🔌 API Endpoints
+## Semnale Early-Warning (Flags)
+
+Sistemul detectează automat 8 tipuri de semnale:
+
+| Flag | Condiție | Semnificație |
+|------|----------|-------------|
+| `cr_low` | Current ratio < 1.0 | Risc de lichiditate pe termen scurt |
+| `debt_high` | Debt ratio > 70% | Levier financiar ridicat |
+| `npm_neg` | Net profit margin < 0 | Pierdere operațională |
+| `roe_neg` | ROE < 0 | Distrugere de valoare |
+| `ic_low` | Interest coverage < 1.5× | Risc de neplată dobânzi |
+| `roa_low` | ROA < 2% | Eficiență scăzută active |
+| `z_distress` | Altman Z < 1.81 | Zonă distress confirmată |
+| `z_grey` | Altman Z 1.81–2.99 | Zonă gri, monitorizare |
+
+---
+
+## API Endpoints
+
+### Companii
 
 | Method | Endpoint | Descriere |
 |--------|----------|-----------|
-| `GET` | `/api/companies/` | Listeaza companii (paginare + cautare) |
-| `GET` | `/api/companies/stats` | Statistici agregate |
+| `GET` | `/api/companies/` | Listare cu paginare (`skip`, `limit` max 5000) |
+| `GET` | `/api/companies/unique` | Un record per companie, cel mai recent an (recomandat pentru frontend) |
+| `GET` | `/api/companies/aggregate-stats` | KPIs agregate pentru toate companiile (foarte rapid, MongoDB pipeline) |
+| `GET` | `/api/companies/stats` | Statistici globale |
 | `GET` | `/api/companies/{id}` | Detalii companie |
-| `POST` | `/api/companies/{id}/predict` | Predictie individuala |
-| `DELETE` | `/api/companies/{id}` | Sterge companie |
-| `POST` | `/api/upload/csv` | Import fisier CSV |
-| `POST` | `/api/ml/train` | Antrenare model |
-| `POST` | `/api/ml/predict` | Predictie ad-hoc (JSON body) |
-| `POST` | `/api/ml/predict-all` | Re-scoreaza toate companiile |
-| `GET` | `/api/ml/model-info` | Info model curent |
+| `DELETE` | `/api/companies/{id}` | Șterge companie |
+
+### ML
+
+| Method | Endpoint | Descriere |
+|--------|----------|-----------|
+| `POST` | `/api/ml/train` | Antrenează modelul pe toate datele cu `is_bankrupt` |
+| `POST` | `/api/ml/predict` | Predicție ad-hoc (JSON body cu indicatori) |
+| `POST` | `/api/ml/predict-all` | Re-scorează toate companiile din DB |
+| `GET` | `/api/ml/model-info` | Info model curent (metrici, features) |
+| `GET` | `/api/ml/forecast/{company_name}?months=36` | Forecast 12L sau 36L pentru o companie |
+
+### Altele
+
+| Method | Endpoint | Descriere |
+|--------|----------|-----------|
+| `POST` | `/api/upload/csv` | Import fișier CSV |
+| `GET` | `/api/alerts/` | Listare alerte active |
+| `GET` | `/api/alerts/count` | Număr alerte per severitate |
+| `GET` | `/api/macro/` | Indicatori macro (BNR, INSSE) |
+| `POST` | `/api/macro/refresh` | Actualizează EUR/RON live de la BNR |
 | `GET` | `/docs` | Swagger UI interactiv |
 
-### Exemplu predictie ad-hoc
+### Exemplu predicție ad-hoc
 
 ```bash
 curl -X POST http://localhost:8000/api/ml/predict \
@@ -179,24 +318,140 @@ curl -X POST http://localhost:8000/api/ml/predict \
   }'
 ```
 
----
-
-## 🛠 Comenzi Utile
+### Exemplu forecast 36 luni
 
 ```bash
-# Genereaza un nou CSV de test
-python data/generate_data.py > data/sample_data.csv
-
-# Rulare cu logging detaliat
-LOG_LEVEL=DEBUG uvicorn backend.main:app --reload
-
-# Testare rapida a ML-ului (fara MongoDB)
-python -c "
-import pandas as pd
-from backend.ml.trainer import train
-from backend.ml.predictor import predict
-df = pd.read_csv('data/sample_data.csv')
-metrics = train(df.to_dict(orient='records'))
-print(metrics)
-"
+curl "http://localhost:8000/api/ml/forecast/NUME%20COMPANIE%20SRL?months=36"
 ```
+
+Returnează array de 36 scoruri lunare (0–100%), calculate cu tendință istorică + amortizare geometrică.
+
+---
+
+## Performanță
+
+| Operație | Timp tipic |
+|----------|-----------|
+| `/api/companies/aggregate-stats` (24k companii) | ~35ms |
+| `/api/companies/unique?limit=10000` | ~400ms |
+| Randare dashboard (2000 companii afișate) | ~1–2s |
+| Antrenare model (10k companii) | ~15–30s |
+
+**Optimizări active:**
+- Indexuri MongoDB pe `company_name`, `risk_label`, `sector`
+- Endpoint `/aggregate-stats` cu pipeline MongoDB — nu trimite date în frontend
+- Tabel frontend paginat (80 rânduri vizibile, „Încarcă mai multe" pe click)
+- KPIs globale calculați server-side, nu în browser
+
+---
+
+## Teme vizuale
+
+Dashboard-ul suportă 4 teme configurabile din panoul **Tweaks** (colț dreapta):
+
+| Temă | Descriere |
+|------|-----------|
+| **Glass** | Glassmorphism — fundal deep-navy, carduri transparente cu blur, aurora violet/albastru |
+| **Terminal** | Dens, monospace, accente verzi |
+| **Fintech** | Modern, clean, albastru |
+| **Editorial** | Serif, generos, ton cald |
+
+Fiecare temă suportă modul **dark/light** și densitate **compact/comfortable**.
+
+---
+
+## Structura bazei de date (MongoDB)
+
+### Colecția `companies`
+
+```json
+{
+  "_id": "ObjectId",
+  "company_name": "EXEMPLU SRL",
+  "year": 2023,
+  "sector": "Productie",
+  "risk_score": 45.2,
+  "risk_label": "Risc mediu",
+  "is_bankrupt": 0,
+  "indicators": {
+    "current_ratio": 1.45,
+    "quick_ratio": 1.12,
+    "debt_ratio": 0.52,
+    "debt_to_equity": 1.08,
+    "net_profit_margin": 8.3,
+    "return_on_assets": 6.1,
+    "return_on_equity": 12.7,
+    "asset_turnover": 0.73,
+    "working_capital_ratio": 0.18,
+    "interest_coverage": 4.2
+  },
+  "created_at": "2026-05-20T21:17:35.774Z"
+}
+```
+
+### Colecția `alerts`
+
+Generată automat pe baza flag-urilor detectate pentru fiecare companie cu risc ridicat.
+
+### Colecția `macro_indicators`
+
+Indicatori macroeconomici: rata dobânzii BNR, inflație, EUR/RON, șomaj, producție industrială.
+
+---
+
+## Depanare frecventă
+
+### `ModuleNotFoundError: No module named 'backend'`
+
+Cauză: script rulat direct cu `python backend/main.py` în loc de modul.
+
+Soluție:
+```bash
+# GREȘIT
+python backend/main.py
+
+# CORECT
+python -m uvicorn backend.main:app --reload --port 8000
+```
+
+### Dashboard arată 0 companii
+
+Verifică:
+1. MongoDB rulează: `sudo systemctl status mongod`
+2. Baza de date conține date: `mongosh bankruptiq --eval "db.companies.countDocuments()"`
+3. Serverul a pornit corect: `curl http://localhost:8000/health`
+
+### Modelul ML nu există
+
+Dacă nu există `models/bankruptcy_model.pkl`:
+```bash
+curl -X POST http://localhost:8000/api/ml/predict-all
+```
+Aceasta generează scoruri pe baza Altman Z-Score fără model antrenat. Pentru model complet:
+```bash
+# Asigură-te că datele au coloana is_bankrupt
+curl -X POST http://localhost:8000/api/ml/train
+```
+
+### Pagina se încarcă lent (prima dată)
+
+Normal — la primul acces, browser-ul compilează ~10 fișiere JSX cu Babel Standalone. Compilarea e cachată pentru sesiunile ulterioare. Timp normal: 3–8 secunde la prima încărcare.
+
+---
+
+## Stack tehnologic
+
+| Componentă | Tehnologie |
+|-----------|-----------|
+| Backend | FastAPI + Uvicorn |
+| Bază de date | MongoDB + Motor (async) |
+| ML | scikit-learn (RandomForest, StandardScaler, SimpleImputer) |
+| Frontend | React 18 + Babel Standalone (fără build step) |
+| Grafice | SVG custom (fără librării externe) |
+| Fonturi | Geist, Geist Mono, Instrument Serif (Google Fonts) |
+
+---
+
+## Licență
+
+© 2026 BankruptIQ · Toate drepturile rezervate.
