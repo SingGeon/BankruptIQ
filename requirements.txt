@@ -10,3 +10,7 @@ python-dotenv>=1.0
 pydantic>=2.10
 pydantic-settings>=2.6
 aiofiles>=24.1
+streamlit>=1.40
+plotly>=5.24
+matplotlib>=3.9
+pymongo>=4.9
