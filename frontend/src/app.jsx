@@ -258,7 +258,9 @@ function App() {
                 period={period}
                 companies={COMPANIES}
                 alerts={ALERTS}
+                selectedCompany={selectedCo}
                 onClickTicker={c => setSelectedCo(c)}
+                onClearCompany={() => setSelectedCo(null)}
               />
 
               <CompaniesGlobe
@@ -283,11 +285,11 @@ function App() {
                   </div>
                 </Card>
 
-                <Card title="Z-Score mediu portofoliu" sub={`perioadă ${period} · prag distress = 1.81`}>
+                <Card title="Z-Score mediu · companii monitorizate" sub={`perioadă ${period} · prag distress = 1.81`}>
                   {tweaks.trendChart === "line" && (
                     <LineChart
                       series={[
-                        { label: "portofoliu", data: portfolioTrend, color: "var(--accent)" },
+                        { label: "monitorizate", data: portfolioTrend, color: "var(--accent)" },
                         { label: "high risk", data: highRiskTrend, color: "var(--risk-high)" },
                       ]}
                       xLabels={xLabels}
@@ -372,9 +374,31 @@ function App() {
               </div>
 
               <div className="grid-main">
-                <Card title="Indicatori financiari · toate companiile" sub={`${filtered.length} din ${COMPANIES.length} · sortare ${sortKey} ${sortDir}`} actionsRight={
-                  <CompaniesFilters riskFilter={riskFilter} setRiskFilter={setRiskFilter} sectorFilter={sectorFilter} setSectorFilter={setSectorFilter} sectors={SECTORS} />
-                }>
+                <Card title="Indicatori financiari · toate companiile"
+                  sub={`${filtered.length.toLocaleString("ro-RO")} din ${COMPANIES.length.toLocaleString("ro-RO")} · sortare ${sortKey} ${sortDir}`}
+                  actionsRight={
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      {/* Search inline */}
+                      <div className="search-wrap" style={{ minWidth: 220 }}>
+                        <span className="search-icon">⌕</span>
+                        <input
+                          className="search-input"
+                          placeholder="Ticker sau denumire…"
+                          value={search}
+                          onChange={e => setSearch(e.target.value)}
+                          style={{ fontSize: 12 }}
+                        />
+                        {search && (
+                          <button onClick={() => setSearch("")} style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            color: "var(--fg-faint)", fontSize: 13, padding: "0 2px", lineHeight: 1,
+                          }}>×</button>
+                        )}
+                      </div>
+                      <CompaniesFilters riskFilter={riskFilter} setRiskFilter={setRiskFilter} sectorFilter={sectorFilter} setSectorFilter={setSectorFilter} sectors={SECTORS} />
+                    </div>
+                  }
+                >
                   <CompaniesTable
                     rows={filtered}
                     sortKey={sortKey}
@@ -404,7 +428,7 @@ function App() {
 
           {view === "sectors" && (
             <>
-              <Card title="Analiză sectoare" sub="ranking după Altman Z mediu + expunere portofoliu">
+              <Card title="Analiză sectoare" sub="ranking după Altman Z mediu + expunere pe companii monitorizate">
                 <HBarChart
                   data={sectorStats.map(s => ({
                     label: `${s.name} (${s.count})`,
@@ -424,21 +448,7 @@ function App() {
           )}
 
           {view === "compare" && (
-            compareCompanies.length > 0 ? (
-              <ComparePanel
-                companies={compareCompanies}
-                onClose={() => { setCompareTickers([]); navigateTo("dashboard"); }}
-                onRemove={t => setCompareTickers(arr => arr.filter(x => x !== t))}
-                period={period}
-              />
-            ) : (
-              <Card title="Comparator" sub="selectează 2-3 companii din tabel pentru comparație">
-                <div style={{ padding: 40, textAlign: "center", color: "var(--fg-dim)" }}>
-                  <div style={{ fontSize: 14, marginBottom: 12 }}>Nicio companie selectată</div>
-                  <button className="btn" onClick={() => navigateTo("dashboard")}>Mergi la tabel</button>
-                </div>
-              </Card>
-            )
+            <ComparatorPage period={period} />
           )}
         </div>
       </main>
@@ -449,6 +459,7 @@ function App() {
         <TweakSection title="Estetică">
           <TweakSelect label="Direcție" value={tweaks.aesthetic} onChange={v => setTweak("aesthetic", v)}
             options={[
+              { value: "glassmorphism", label: "Glass — transparent, blur" },
               { value: "terminal", label: "Terminal — dens, mono" },
               { value: "fintech", label: "Fintech — modern, soft" },
               { value: "editorial", label: "Editorial — serif, generos" },
@@ -503,13 +514,6 @@ function Sidebar({ view, setView, kpis, unreadAlerts }) {
         ))}
       </nav>
       <div className="sidebar-footer">
-        <div className="user-chip">
-          <div className="user-avatar">AP</div>
-          <div>
-            <div className="user-name">Andrei Popescu</div>
-            <div className="user-role">Senior Risk Analyst</div>
-          </div>
-        </div>
         <div className="data-status">
           <span className="status-dot" />
           <span>date sincronizate · acum 4 min</span>
@@ -546,7 +550,7 @@ function TopBar({ period, setPeriod, search, setSearch, compareCount }) {
 function KPIRow({ kpis, portfolioTrend }) {
   const items = [
     { label: "Companii monitorizate", value: kpis.total, sub: "+2 luna trecută", trend: null },
-    { label: "Risc înalt", value: kpis.high, sub: `${(kpis.high / kpis.total * 100).toFixed(0)}% portofoliu`, accent: "var(--risk-high)", trend: null },
+    { label: "Risc înalt", value: kpis.high, sub: `${(kpis.high / kpis.total * 100).toFixed(0)}% din monitorizate`, accent: "var(--risk-high)", trend: null },
     { label: "Alerte active", value: kpis.totalAlerts, sub: "3 critice · 4 înalt", accent: "var(--risk-medium)" },
     { label: "Z-Score mediu", value: kpis.avgZ.toFixed(2), sub: "vs. prag 1.81", trend: portfolioTrend.slice(-12) },
     { label: "Venituri agregate", value: `${(kpis.portfolioRevenue / 1000).toFixed(1)}B`, sub: "RON · agregat 4Q" },
@@ -604,7 +608,17 @@ function CompaniesFilters({ riskFilter, setRiskFilter, sectorFilter, setSectorFi
 }
 
 // ---------- Companies table ----------
+const PAGE_SIZE = 80;
+
 function CompaniesTable({ rows, sortKey, sortDir, toggleSort, onClick, onCompare, compareTickers, sectors, period }) {
+  const [visible, setVisible] = React.useState(PAGE_SIZE);
+
+  // Reset când se schimbă filtrele
+  React.useEffect(() => { setVisible(PAGE_SIZE); }, [rows]);
+
+  const visibleRows = rows.slice(0, visible);
+  const hasMore     = visible < rows.length;
+
   const cols = [
     { key: "ticker", label: "Ticker" },
     { key: "name", label: "Companie" },
@@ -631,7 +645,7 @@ function CompaniesTable({ rows, sortKey, sortDir, toggleSort, onClick, onCompare
           </tr>
         </thead>
         <tbody>
-          {rows.map(c => {
+          {visibleRows.map(c => {
             const trend = c.zTrend.slice(-36);
             const rc = window.riskColor(c.riskClass);
             const selected = compareTickers.includes(c.ticker);
@@ -669,6 +683,18 @@ function CompaniesTable({ rows, sortKey, sortDir, toggleSort, onClick, onCompare
           })}
         </tbody>
       </table>
+      {hasMore && (
+        <div style={{ padding: "12px 0", textAlign: "center", borderTop: "1px solid var(--border)" }}>
+          <button className="btn-ghost" onClick={() => setVisible(v => v + PAGE_SIZE)} style={{
+            fontFamily: "var(--font-mono)", fontSize: 11, padding: "6px 20px"
+          }}>
+            Încarcă {Math.min(PAGE_SIZE, rows.length - visible)} mai multe
+            <span style={{ color: "var(--fg-faint)", marginLeft: 6 }}>
+              ({visible}/{rows.length})
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

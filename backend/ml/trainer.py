@@ -88,7 +88,7 @@ def train(records: list[dict]) -> dict:
         "precision": round(precision_score(y_test, y_pred, zero_division=0), 4),
         "recall": round(recall_score(y_test, y_pred, zero_division=0), 4),
         "f1_score": round(f1_score(y_test, y_pred, zero_division=0), 4),
-        "auc_roc": round(roc_auc_score(y_test, y_prob), 4),
+        "auc_roc": round(roc_auc_score(y_test, y_prob), 4) if y_test.nunique() >= 2 else 0.0,
         "n_samples": len(df),
         "n_features": len(FEATURE_COLUMNS),
         "model_type": "RandomForestClassifier",

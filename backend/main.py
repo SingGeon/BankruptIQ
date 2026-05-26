@@ -25,8 +25,13 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("BankruptIQ pornit. Conectare MongoDB...")
-    get_db()
+    db = get_db()
     await seed_macro()
+    # Indexuri pentru interogări rapide
+    await db["companies"].create_index("company_name")
+    await db["companies"].create_index("risk_label")
+    await db["companies"].create_index("sector")
+    await db["companies"].create_index([("risk_label", 1), ("sector", 1)])
     # Generează alerte dacă colecția e goală
     from backend.database import get_db as _db
     db = _db()

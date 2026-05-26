@@ -1,6 +1,47 @@
 // BankruptIQ — theming system: 3 aesthetics × dark/light × risk palettes × density
 
 const AESTHETIC_THEMES = {
+  glassmorphism: {
+    name: "Glass",
+    fontHead: '"Geist", system-ui, sans-serif',
+    fontBody: '"Geist", system-ui, sans-serif',
+    fontMono: '"Geist Mono", ui-monospace, monospace',
+    radius: "12px",
+    radiusCard: "18px",
+    cardBorder: "1px solid rgba(255, 255, 255, 0.09)",
+    cardShadow: "0 8px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.07)",
+    cardBg: "rgba(255, 255, 255, 0.04)",
+    glassBlur: "blur(20px) saturate(160%)",
+    glassAmbient: "1",
+    headerWeight: 600,
+    headerCase: "none",
+    headerSpacing: "-0.015em",
+    titleSize: "1.1rem",
+    chromeBlur: true,
+    accentStyle: "pill",
+    dark: {
+      bg: "#06070d",
+      bgElev: "rgba(255, 255, 255, 0.04)",
+      bgElev2: "rgba(255, 255, 255, 0.07)",
+      fg: "#eaedf6",
+      fgDim: "#8890aa",
+      fgFaint: "#454d62",
+      border: "rgba(255, 255, 255, 0.09)",
+      accent: "#a78bfa",
+      accentDim: "#7c5ce0",
+    },
+    light: {
+      bg: "#d8ddf2",
+      bgElev: "rgba(255, 255, 255, 0.55)",
+      bgElev2: "rgba(255, 255, 255, 0.75)",
+      fg: "#0d1230",
+      fgDim: "#4c5580",
+      fgFaint: "#9098b8",
+      border: "rgba(255, 255, 255, 0.65)",
+      accent: "#5c35d8",
+      accentDim: "#8462f0",
+    },
+  },
   terminal: {
     name: "Terminal",
     fontHead: '"IBM Plex Mono", ui-monospace, Menlo, monospace',
@@ -184,6 +225,8 @@ function buildCssVars(aesthetic, mode, riskPalette, density) {
     "--gap": `${d.gap}px`,
     "--pad-card": `${d.padCard}px`,
     "--font-table": `${d.fontTable}px`,
+    "--glass-blur": t.glassBlur || "none",
+    "--glass-ambient": t.glassAmbient || "0",
   };
 }
 

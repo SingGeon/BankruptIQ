@@ -25,10 +25,70 @@ def _doc_to_out(doc: dict) -> dict:
     }
 
 
+@router.get("/aggregate-stats")
+async def get_aggregate_stats():
+    """KPIs agregate pentru TOATE companiile din baza de date — foarte rapid (MongoDB pipeline)."""
+    db = get_db()
+    pipeline = [
+        {"$group": {
+            "_id": None,
+            "total":      {"$sum": 1},
+            "high":       {"$sum": {"$cond": [{"$eq": ["$risk_label", "Risc mare"]},  1, 0]}},
+            "medium":     {"$sum": {"$cond": [{"$eq": ["$risk_label", "Risc mediu"]}, 1, 0]}},
+            "low":        {"$sum": {"$cond": [{"$eq": ["$risk_label", "Risc mic"]},   1, 0]}},
+            "avg_risk_score": {"$avg": "$risk_score"},
+        }},
+        {"$project": {"_id": 0}},
+    ]
+    result = await db["companies"].aggregate(pipeline).to_list(1)
+    if not result:
+        return {"total": 0, "high": 0, "medium": 0, "low": 0, "avg_risk_score": 0}
+
+    # Sector breakdown
+    sector_pipeline = [
+        {"$group": {
+            "_id": "$sector",
+            "count":    {"$sum": 1},
+            "high":     {"$sum": {"$cond": [{"$eq": ["$risk_label", "Risc mare"]}, 1, 0]}},
+            "avg_risk": {"$avg": "$risk_score"},
+        }},
+        {"$sort": {"count": -1}},
+    ]
+    sectors = await db["companies"].aggregate(sector_pipeline).to_list(50)
+
+    return {**result[0], "sectors": sectors}
+
+
+@router.get("/unique", response_model=list[CompanyOut])
+async def list_unique_companies(
+    limit: int = Query(10000, ge=1, le=30000),
+    search: str = Query(""),
+):
+    """Un singur record per companie (cel mai recent an) — fără duplicate."""
+    db = get_db()
+    match: dict = {}
+    if search:
+        match["company_name"] = {"$regex": search, "$options": "i"}
+
+    pipeline = [
+        *([ {"$match": match} ] if match else []),
+        {"$sort": {"year": -1}},
+        {"$group": {
+            "_id": "$company_name",
+            "doc": {"$first": "$$ROOT"},
+        }},
+        {"$replaceRoot": {"newRoot": "$doc"}},
+        {"$sort": {"company_name": 1}},
+        {"$limit": limit},
+    ]
+    docs = await db["companies"].aggregate(pipeline).to_list(limit)
+    return [_doc_to_out(d) for d in docs]
+
+
 @router.get("/", response_model=list[CompanyOut])
 async def list_companies(
     skip: int = Query(0, ge=0),
-    limit: int = Query(500, ge=1, le=2000),
+    limit: int = Query(500, ge=1, le=5000),
     search: str = Query(""),
 ):
     db = get_db()
@@ -36,7 +96,7 @@ async def list_companies(
     if search:
         query["company_name"] = {"$regex": search, "$options": "i"}
 
-    cursor = db["companies"].find(query).skip(skip).limit(limit).sort("created_at", -1)
+    cursor = db["companies"].find(query).skip(skip).limit(limit).sort("company_name", 1)
     docs = await cursor.to_list(length=limit)
     return [_doc_to_out(d) for d in docs]
 

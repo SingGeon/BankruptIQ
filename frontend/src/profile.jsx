@@ -201,7 +201,8 @@ function ProfileDrawer({ company, onClose, period }) {
                   {[
                     { lbl: "Scor risc acum",   val: fcRiskNow !== null  ? fcRiskNow.toFixed(1) + "%" : "—" },
                     { lbl: `Scor risc +${fcLen}L`, val: fcData ? fcData[fcData.length - 1].toFixed(1) + "%" : "—" },
-                    { lbl: "Trend",             val: fcData && fcData[fcData.length-1] > fcData[0] ? "▲ în creștere" : "▼ în scădere",
+                    { lbl: "Trend Z-Score",
+                      val: fcData && fcData[fcData.length-1] > fcData[0] ? "▼ deteriorare" : "▲ îmbunătățire",
                       color: fcData && fcData[fcData.length-1] > fcData[0] ? "var(--risk-high)" : "var(--risk-low)" },
                   ].map((k, i) => (
                     <div key={i} style={{ flex: 1, padding: "10px 14px", borderRight: i < 2 ? "1px solid var(--border)" : "none" }}>
@@ -224,8 +225,8 @@ function ProfileDrawer({ company, onClose, period }) {
                   xLabels={combinedXLabels}
                   height={180}
                   threshold={1.81}
-                  yMin={0.2}
-                  yMax={5.5}
+                  yMin={Math.max(0, Math.floor(Math.min(...[...combinedHistSeries, ...combinedFcSeries].filter(v => v !== null)) - 0.3))}
+                  yMax={Math.ceil(Math.max(...[...combinedHistSeries, ...combinedFcSeries].filter(v => v !== null)) + 0.5)}
                 />
 
                 <div style={{ fontSize: 11, color: "var(--fg-faint)", marginTop: 8, fontFamily: "var(--font-mono)" }}>
@@ -261,6 +262,108 @@ function ProfileDrawer({ company, onClose, period }) {
                 sub={c.currentRatio < 1 ? "sub 1.0 — atenție" : "lichiditate ok"}
                 riskHi={c.currentRatio < 1} />
               <FinRow label="ROE" value={`${c.roe.toFixed(1)}%`} riskHi={c.roe < 0} />
+            </div>
+          </section>
+
+          {/* ── Detaliu complet indicatori + benchmark ───────────── */}
+          <section className="card" style={{ marginTop: "var(--gap)" }}>
+            <header className="card-head">
+              <h3 className="card-title">Indicatori financiari detaliat</h3>
+              <div className="card-sub">valoare · prag · status</div>
+            </header>
+            <div className="card-body" style={{ padding: 0 }}>
+              {[
+                { lbl: "Current Ratio",       val: c.currentRatio,             fmt: v => v.toFixed(2),        thresh: 1.0,   cmp: "gte", unit: "" ,   bench: "min 1.0" },
+                { lbl: "Debt Ratio",          val: c.debt / Math.max(1, c.assets || c.debt + c.equity), fmt: v => (v*100).toFixed(1)+"%", thresh: 0.70, cmp: "lte", unit: "", bench: "max 70%" },
+                { lbl: "Leverage (D/E)",      val: c.leverage,                 fmt: v => v.toFixed(2)+"x",    thresh: 3.0,   cmp: "lte", unit: "x",   bench: "max 3x" },
+                { lbl: "ROE",                 val: c.roe,                      fmt: v => v.toFixed(1)+"%",    thresh: 0,     cmp: "gte", unit: "%",   bench: "min 0%" },
+                { lbl: "Marjă EBITDA",        val: c.ebitda / Math.max(1, c.revenue) * 100, fmt: v => v.toFixed(1)+"%", thresh: 5, cmp: "gte", unit: "%", bench: "min 5%" },
+                { lbl: "Altman Z-Score",      val: c.altmanZ,                  fmt: v => v.toFixed(2),        thresh: 2.99,  cmp: "gte", unit: "",    bench: "min 2.99" },
+                { lbl: "Ohlson O-Score",      val: c.ohlsonO,                  fmt: v => v.toFixed(2),        thresh: 0.5,   cmp: "lte", unit: "",    bench: "max 0.5" },
+                { lbl: "P(faliment) 12L",     val: c.prob12,                   fmt: v => v.toFixed(1)+"%",    thresh: 30,    cmp: "lte", unit: "%",   bench: "max 30%" },
+                { lbl: "ML Score risc (0-10)",val: c.mlScore,                  fmt: v => v.toFixed(1),        thresh: 5,     cmp: "gte", unit: "",    bench: "min 5 (bun)" },
+              ].map((row, i) => {
+                const ok = row.cmp === "gte" ? row.val >= row.thresh : row.val <= row.thresh;
+                const warn = row.cmp === "gte"
+                  ? row.val >= row.thresh * 0.7 && row.val < row.thresh
+                  : row.val <= row.thresh * 1.3 && row.val > row.thresh;
+                const status = ok ? "✓" : warn ? "⚠" : "✗";
+                const statusColor = ok ? "var(--risk-low)" : warn ? "var(--risk-medium)" : "var(--risk-high)";
+                const pct = row.cmp === "gte"
+                  ? Math.min(100, (row.val / (row.thresh * 1.5)) * 100)
+                  : Math.min(100, ((row.thresh * 2 - Math.max(0, row.val)) / (row.thresh * 2)) * 100);
+                return (
+                  <div key={i} style={{
+                    display: "grid", gridTemplateColumns: "1fr auto 60px 28px",
+                    alignItems: "center", gap: 10, padding: "10px 16px",
+                    borderBottom: i < 8 ? "1px solid var(--border)" : "none",
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>{row.lbl}</div>
+                      <div style={{ marginTop: 4, height: 4, background: "var(--bg-elev-2)", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: statusColor, borderRadius: 2, transition: "width 600ms ease" }} />
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: statusColor }}>{row.fmt(row.val)}</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--fg-faint)", textAlign: "right" }}>{row.bench}</div>
+                    <div style={{ fontSize: 14, color: statusColor, textAlign: "center" }}>{status}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* ── Comparație cu media sectorului ───────────────────── */}
+          <section className="card" style={{ marginTop: "var(--gap)" }}>
+            <header className="card-head">
+              <h3 className="card-title">Comparație cu sectorul</h3>
+              <div className="card-sub">{window.BIQ_DATA.SECTORS[c.sector] || c.sector} · media companiilor similare</div>
+            </header>
+            <div className="card-body" style={{ padding: 0 }}>
+              {(() => {
+                const sectorCos = window.BIQ_DATA.COMPANIES.filter(x => x.sector === c.sector);
+                const avg = field => sectorCos.length
+                  ? sectorCos.reduce((s, x) => s + (x[field] || 0), 0) / sectorCos.length
+                  : 0;
+                const avgZ    = avg("altmanZ");
+                const avgRoe  = avg("roe");
+                const avgLev  = avg("leverage");
+                const avgCr   = avg("currentRatio");
+                const avgProb = avg("prob12");
+                const rows = [
+                  { lbl: "Altman Z",        co: c.altmanZ,      sec: avgZ,    fmt: v => v.toFixed(2),      better: "high" },
+                  { lbl: "ROE",             co: c.roe,          sec: avgRoe,  fmt: v => v.toFixed(1)+"%",  better: "high" },
+                  { lbl: "Leverage",        co: c.leverage,     sec: avgLev,  fmt: v => v.toFixed(2)+"x",  better: "low"  },
+                  { lbl: "Current Ratio",   co: c.currentRatio, sec: avgCr,   fmt: v => v.toFixed(2),      better: "high" },
+                  { lbl: "P(faliment) 12L", co: c.prob12,       sec: avgProb, fmt: v => v.toFixed(1)+"%",  better: "low"  },
+                ];
+                return rows.map((r, i) => {
+                  const better = r.better === "high" ? r.co >= r.sec : r.co <= r.sec;
+                  const diff   = r.co - r.sec;
+                  const diffFmt = (r.better === "high" ? (diff >= 0 ? "+" : "") : (diff >= 0 ? "+" : "")) + diff.toFixed(2);
+                  return (
+                    <div key={i} style={{
+                      display: "grid", gridTemplateColumns: "1fr 80px 80px 70px",
+                      alignItems: "center", gap: 8, padding: "10px 16px",
+                      borderBottom: i < rows.length - 1 ? "1px solid var(--border)" : "none",
+                    }}>
+                      <div style={{ fontSize: 12, color: "var(--fg-dim)", fontFamily: "var(--font-mono)" }}>{r.lbl}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: riskColor, textAlign: "right" }}>{r.fmt(r.co)}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--fg-faint)", textAlign: "right" }}>{r.fmt(r.sec)}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, textAlign: "right",
+                        color: better ? "var(--risk-low)" : "var(--risk-high)" }}>
+                        {diffFmt}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+              <div style={{ padding: "8px 16px", borderTop: "1px solid var(--border)", display: "flex", gap: 16,
+                fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--fg-faint)" }}>
+                <span>COMPANIE</span>
+                <span style={{ marginLeft: "auto" }}>SECTOR AVG</span>
+                <span>DIFERENȚĂ</span>
+              </div>
             </div>
           </section>
 

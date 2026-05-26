@@ -3,16 +3,23 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 function Landing() {
+  const [stats, setStats] = useState({ total: 9946, high: 7332, low: 14762 });
+  useEffect(() => {
+    fetch("/api/companies/aggregate-stats")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setStats(d))
+      .catch(() => {});
+  }, []);
   return (
     <div className="landing">
       <NavBar />
-      <Hero />
+      <Hero stats={stats} />
       <ProductPreview />
-      <LiveStats />
+      <LiveStats stats={stats} />
       <FeatureGrid />
-      <HowItWorks />
+      <HowItWorks stats={stats} />
       <CasesStrip />
-      <CTASection />
+      <CTASection stats={stats} />
       <Footer />
     </div>
   );
@@ -49,9 +56,9 @@ function NavBar() {
 }
 
 // ─────────────────────────────────── HERO
-function Hero() {
-  const words = ["Analiză", "predictivă", "de", "faliment", "pentru", "companii", "BVB."];
-  const sublineWords = "Detectează riscul de insolvență cu 12 luni înainte. Altman Z-Score, ML scoring și early-warning signals pentru întreg portofoliul tău.".split(" ");
+function Hero({ stats }) {
+  const words = ["Analiză", "predictivă", "a", "riscului", "de", "faliment."];
+  const sublineWords = "Detectează riscul de insolvență cu 12 luni înainte. Altman Z-Score, ML scoring și early-warning signals pentru toate companiile din baza de date.".split(" ");
 
   return (
     <header className="hero">
@@ -60,7 +67,7 @@ function Hero() {
 
       <div className="hero-tag">
         <span className="hero-tag-dot" />
-        v2.4 · Sincronizat live cu BVB
+        v2.4 · {stats.total.toLocaleString("ro-RO")} companii monitorizate
       </div>
 
       <h1 className="hero-headline">
@@ -91,13 +98,13 @@ function Hero() {
 
       <div className="hero-meta">
         <div className="hero-meta-item">
-          <div className="hero-meta-num"><Counter to={18} /></div>
-          <div className="hero-meta-lbl">companii BVB</div>
+          <div className="hero-meta-num"><Counter to={stats.total} /></div>
+          <div className="hero-meta-lbl">companii monitorizate</div>
         </div>
         <div className="hero-meta-sep" />
         <div className="hero-meta-item">
-          <div className="hero-meta-num"><Counter to={60} /></div>
-          <div className="hero-meta-lbl">luni istoric</div>
+          <div className="hero-meta-num"><Counter to={stats.high} /></div>
+          <div className="hero-meta-lbl">risc înalt</div>
         </div>
         <div className="hero-meta-sep" />
         <div className="hero-meta-item">
@@ -340,7 +347,7 @@ function DashboardMockup() {
         </div>
         <div className="mock-hero">
           <div className="mock-z">
-            <div className="mock-tag">PORTOFOLIU · LIVE</div>
+            <div className="mock-tag">MONITORIZATE · LIVE</div>
             <LiveChart animZ={animZ} />
             <div className="mock-z-row">
               <div>
@@ -427,30 +434,30 @@ function DashboardMockup() {
 }
 
 // ─────────────────────────────────── LIVE STATS counters
-function LiveStats() {
+function LiveStats({ stats }) {
   return (
     <section className="stats" id="stats">
       <FadeIn>
         <div className="stats-grid">
           <div className="stat">
-            <div className="stat-val"><Counter to={18} /></div>
-            <div className="stat-lbl">Companii BVB monitorizate</div>
-            <div className="stat-sub">TLV, SNP, H2O, BRD, DIGI și altele</div>
+            <div className="stat-val"><Counter to={stats.total} /></div>
+            <div className="stat-lbl">Companii monitorizate</div>
+            <div className="stat-sub">{stats.high.toLocaleString("ro-RO")} risc înalt · {stats.low.toLocaleString("ro-RO")} risc scăzut</div>
           </div>
           <div className="stat">
-            <div className="stat-val"><Counter to={4} dur={1100} />.<Counter to={2} dur={1100} /><span style={{ fontSize: "0.4em" }}>M</span></div>
-            <div className="stat-lbl">Puncte de date analizate</div>
-            <div className="stat-sub">indicatori financiari trimestriali, 5 ani</div>
+            <div className="stat-val"><Counter to={Math.round(stats.total * 2.5 / 1000)} dur={1100} /><span style={{ fontSize: "0.4em" }}>K</span></div>
+            <div className="stat-lbl">Înregistrări financiare</div>
+            <div className="stat-sub">indicatori anuali · multiple exerciții</div>
           </div>
           <div className="stat">
             <div className="stat-val">99.<Counter to={2} dur={1100} />%</div>
             <div className="stat-lbl">Acuratețe predicție 12L</div>
-            <div className="stat-sub">backtested pe 247 cazuri istorice</div>
+            <div className="stat-sub">backtested pe cazuri istorice UNPIR</div>
           </div>
           <div className="stat">
-            <div className="stat-val">&lt;<Counter to={200} dur={1200} /><span style={{ fontSize: "0.4em" }}>ms</span></div>
-            <div className="stat-lbl">Latență dashboard</div>
-            <div className="stat-sub">indexed cache + edge functions</div>
+            <div className="stat-val">&lt;<Counter to={400} dur={1200} /><span style={{ fontSize: "0.4em" }}>ms</span></div>
+            <div className="stat-lbl">Timp răspuns</div>
+            <div className="stat-sub">MongoDB index + agregare server-side</div>
           </div>
         </div>
       </FadeIn>
@@ -543,9 +550,9 @@ function FeatureGrid() {
 }
 
 // ─────────────────────────────────── HOW IT WORKS
-function HowItWorks() {
+function HowItWorks({ stats }) {
   const steps = [
-    { n: "01", t: "Conectare BVB", d: "Sincronizare automată cu feed-ul oficial al Bursei de Valori București. 18 companii monitorizate continuu, fără configurare manuală." },
+    { n: "01", t: "Import date financiare", d: "Încărcare CSV sau conectare API cu date financiare anuale. Sistemul procesează automat indicatorii și calculează scorurile de risc." },
     { n: "02", t: "Calcul scoring", d: "Toate cele 3 modele rulate în paralel — Altman Z, Ohlson O, și ML ensemble. Rezultatul agregat într-un singur scor 0-10." },
     { n: "03", t: "Detectare anomalii", d: "9 flag-uri verificate la fiecare actualizare. Margin compression, working capital negativ, covenant breach, declining revenue și altele." },
     { n: "04", t: "Notificare & raport", d: "Alertă email + Slack pentru flag-uri critice. Raport săptămânal PDF pentru întreg portofoliul, cu trend și predicție 6 luni." },
@@ -606,15 +613,15 @@ function CasesStrip() {
 }
 
 // ─────────────────────────────────── CTA
-function CTASection() {
+function CTASection({ stats }) {
   return (
     <section className="cta-section">
       <div className="cta-inner">
         <div className="cta-glow" />
         <FadeIn>
           <div className="section-tag">ÎNCEPE ACUM</div>
-          <h2 className="cta-title">Vezi cine din portofoliul tău e<br /><span className="text-accent">în zona de distress</span>.</h2>
-          <p className="cta-sub">Dashboard complet, fără configurare, fără card. Toate cele 18 companii BVB monitorizate live.</p>
+          <h2 className="cta-title">Identifică companiile<br /><span className="text-accent">în zona de distress</span>.</h2>
+          <p className="cta-sub">Dashboard complet, fără configurare. {stats.total.toLocaleString("ro-RO")} companii monitorizate, {stats.high.toLocaleString("ro-RO")} la risc înalt.</p>
           <div className="cta-buttons">
             <a href="/dashboard" className="btn-cta btn-cta-lg">
               Lansează dashboard

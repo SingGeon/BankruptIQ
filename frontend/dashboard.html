@@ -66,13 +66,26 @@
       opacity: 0.18;
       z-index: 0;
     }
-    /* scan-line disabled for cleaner look */
-    .app::after { display: none; }
+    /* aurora blobs — visible only in glassmorphism (--glass-ambient = 1) */
+    .app::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: var(--glass-ambient, 0);
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 15%, rgba(124, 58, 237, 0.18), transparent 60%),
+        radial-gradient(ellipse 55% 45% at 85% 75%, rgba(37, 99, 235, 0.14), transparent 60%),
+        radial-gradient(ellipse 50% 55% at 65% 5%,  rgba(168, 85, 247, 0.12), transparent 55%);
+    }
     .sidebar, .main { position: relative; z-index: 2; }
 
     /* ───────────────── Sidebar ───────────────── */
     .sidebar {
       background: var(--bg-elev);
+      backdrop-filter: var(--glass-blur, none);
+      -webkit-backdrop-filter: var(--glass-blur, none);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -165,9 +178,9 @@
       position: sticky; top: 0; z-index: 10;
       display: flex; align-items: center; gap: 12px;
       padding: 14px 28px;
-      background: color-mix(in oklab, var(--bg) 80%, transparent);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: color-mix(in oklab, var(--bg) 75%, transparent);
+      backdrop-filter: var(--glass-blur, blur(12px));
+      -webkit-backdrop-filter: var(--glass-blur, blur(12px));
       border-bottom: 1px solid var(--border);
     }
     .topbar-spacer { flex: 1; }
@@ -269,6 +282,8 @@
     }
     .kpi-tile {
       background: var(--card-bg);
+      backdrop-filter: var(--glass-blur, none);
+      -webkit-backdrop-filter: var(--glass-blur, none);
       border: var(--card-border);
       border-radius: var(--radius-card);
       box-shadow: var(--card-shadow);
@@ -301,6 +316,8 @@
     /* ───────────────── Card ───────────────── */
     .card {
       background: var(--card-bg);
+      backdrop-filter: var(--glass-blur, none);
+      -webkit-backdrop-filter: var(--glass-blur, none);
       border: var(--card-border);
       border-radius: var(--radius-card);
       box-shadow: var(--card-shadow);
@@ -373,12 +390,13 @@
     }
 
     /* ───────────────── Table ───────────────── */
-    .table-wrap { overflow-x: auto; }
+    .table-wrap { overflow-x: auto; isolation: isolate; }
     .table {
       width: 100%;
       border-collapse: collapse;
       font-size: var(--font-table);
       font-family: var(--font-body);
+      transform: translateZ(0); /* izolează compositing layer de backdrop-filter al cardului */
     }
     .table thead th {
       padding: 10px 8px;
@@ -404,8 +422,10 @@
       cursor: pointer;
       transition: background-color 80ms ease;
       border-bottom: 1px solid var(--border);
+      pointer-events: auto;
     }
     .table tbody tr:hover { background: var(--bg-elev-2); }
+    .table tbody tr:not(:hover) { background: transparent; }
     .table tbody tr.tr-selected {
       background: color-mix(in oklab, var(--accent) 8%, transparent);
     }
@@ -2373,7 +2393,7 @@
 
   <script>
     window.TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-      "aesthetic": "fintech",
+      "aesthetic": "glassmorphism",
       "mode": "dark",
       "density": "comfortable",
       "riskPalette": "classic",

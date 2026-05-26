@@ -2,14 +2,18 @@
 
 const { useState: useStateH, useEffect: useEffectH, useMemo: useMemoH } = React;
 
-function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, onClickTicker }) {
-  // Animate Z-score number on mount
+function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, onClickTicker, selectedCompany, onClearCompany }) {
+  // Datele active: compania selectată sau media tuturor companiilor
+  const activeTrend = selectedCompany ? selectedCompany.zTrend : portfolioTrend;
+  const activeZ     = selectedCompany ? selectedCompany.altmanZ : kpis.avgZ;
+
+  // Animate Z-score number ori de câte ori se schimbă sursa
   const [animZ, setAnimZ] = useStateH(0);
   useEffectH(() => {
     let raf;
     const start = performance.now();
-    const target = kpis.avgZ;
-    const dur = 1200;
+    const target = activeZ;
+    const dur = 900;
     const tick = (now) => {
       const t = Math.min(1, (now - start) / dur);
       const eased = 1 - Math.pow(1 - t, 3);
@@ -18,7 +22,7 @@ function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, on
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [kpis.avgZ]);
+  }, [activeZ]);
 
   // Live tickers in mid-panel — animated counts
   const [pulse, setPulse] = useStateH(0);
@@ -27,8 +31,8 @@ function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, on
     return () => clearInterval(id);
   }, []);
 
-  const lastZ = portfolioTrend[portfolioTrend.length - 1];
-  const prevZ = portfolioTrend[Math.max(0, portfolioTrend.length - 13)] || lastZ;
+  const lastZ = activeTrend[activeTrend.length - 1];
+  const prevZ = activeTrend[Math.max(0, activeTrend.length - 13)] || lastZ;
   const zDelta = lastZ - prevZ;
   const zDeltaPct = (zDelta / prevZ) * 100;
 
@@ -41,17 +45,30 @@ function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, on
 
   return (
     <div className="hero-bridge">
-      {/* ── Left: Portfolio Z-Score (giant) ── */}
+      {/* ── Left: Z-Score (toate companiile sau companie selectată) ── */}
       <section className="hero-left">
-        <div className="hero-corner-tag">
-          <span className="hero-corner-dot" />
-          PORTOFOLIU · LIVE
+        <div className="hero-corner-tag" style={{ justifyContent: "space-between", width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="hero-corner-dot" style={{ background: selectedCompany ? window.riskColor(selectedCompany.riskClass) : undefined }} />
+            {selectedCompany
+              ? <><span style={{ color: window.riskColor(selectedCompany.riskClass), fontWeight: 700 }}>{selectedCompany.ticker}</span><span style={{ opacity: 0.6 }}> · LIVE</span></>
+              : "MONITORIZATE · LIVE"}
+          </div>
+          {selectedCompany && (
+            <button onClick={onClearCompany} style={{
+              background: "none", border: "1px solid var(--border)", borderRadius: 4,
+              color: "var(--fg-faint)", fontSize: 10, padding: "2px 7px", cursor: "pointer",
+              fontFamily: "var(--font-mono)", letterSpacing: "0.08em"
+            }}>× MONITORIZATE</button>
+          )}
         </div>
 
         <div className="hero-z-block">
-          <BigLiveChart value={animZ} trend={portfolioTrend} threshold={1.81} good={2.99} />
+          <BigLiveChart value={animZ} trend={activeTrend} threshold={1.81} good={2.99} />
           <div className="hero-z-num">
-            <div className="hero-z-label">Z-SCORE MEDIU PORTOFOLIU</div>
+            <div className="hero-z-label">
+              {selectedCompany ? `Z-SCORE · ${selectedCompany.name.toUpperCase().slice(0, 28)}` : "Z-SCORE MEDIU · COMPANII MONITORIZATE"}
+            </div>
             <div className="hero-z-value">{animZ.toFixed(2)}</div>
             <div className="hero-z-delta">
               <span className={"hero-delta-pill " + (zDelta > 0 ? "up" : "down")}>
@@ -100,7 +117,7 @@ function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, on
           <MetricStrip
             label="Risc înalt"
             value={`${kpis.high}/${kpis.total}`}
-            sub={`${riskPct.toFixed(0)}% din portofoliu`}
+            sub={`${riskPct.toFixed(0)}% din total monitorizate`}
             color="var(--risk-high)"
             trend={portfolioTrend.slice(-24)}
             tone="warning"
@@ -220,7 +237,7 @@ function BigLiveChart({ value, trend, threshold, good }) {
     return () => clearInterval(id);
   }, []);
 
-  const W = 340, H = 160, padL = 6, padR = 6, padT = 14, padB = 20;
+  const W = 420, H = 220, padL = 6, padR = 6, padT = 14, padB = 20;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
   const min = 0.5, max = 6;
@@ -242,7 +259,7 @@ function BigLiveChart({ value, trend, threshold, good }) {
     : "var(--risk-low)";
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", maxWidth: 340, display: "block" }}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", maxWidth: 420, display: "block" }}>
       <defs>
         <linearGradient id="bigArea" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.4" />

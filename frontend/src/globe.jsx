@@ -66,7 +66,7 @@ function CompaniesGlobe({ companies, onSelectCompany }) {
     <div className="globe-wrap" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       <div className="globe-head">
         <div>
-          <h3 className="globe-title">Constelația portofoliului</h3>
+          <h3 className="globe-title">Constelația companiilor</h3>
           <p className="globe-sub">{filtered.length} companii · poziționate pe sferă · click pentru detalii · {paused ? "pauză" : "auto-rotire"}</p>
         </div>
         <div className="globe-filter">

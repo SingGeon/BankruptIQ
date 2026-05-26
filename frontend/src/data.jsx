@@ -208,7 +208,9 @@
 
   /* ── Fetch from API ───────────────────────────────────────────── */
 
-  const rawCompanies = syncGet("/api/companies/?limit=1000") || [];
+  // Un record per companie (cel mai recent an) — /unique deduplicează pe backend
+  const rawCompanies  = syncGet("/api/companies/unique?limit=10000") || [];
+  const aggregateStats = syncGet("/api/companies/aggregate-stats") || null;
 
   /* ── Group by company name, take all years ────────────────────── */
 
@@ -365,14 +367,18 @@
   /* ── getKPIs / getSectorStats ─────────────────────────────────── */
 
   function getKPIs() {
-    const high   = COMPANIES.filter(c => c.riskClass === "high").length;
-    const medium = COMPANIES.filter(c => c.riskClass === "medium").length;
-    const low    = COMPANIES.filter(c => c.riskClass === "low").length;
-    const total  = COMPANIES.length;
-    const avgZ   = total > 0 ? +(COMPANIES.reduce((s, c) => s + c.altmanZ, 0) / total).toFixed(2) : 0;
+    // Folosim agregatul backend (acoperă toți cei ~25k) dacă e disponibil
+    const agg = aggregateStats;
+    const total  = agg ? agg.total  : COMPANIES.length;
+    const high   = agg ? agg.high   : COMPANIES.filter(c => c.riskClass === "high").length;
+    const medium = agg ? agg.medium : COMPANIES.filter(c => c.riskClass === "medium").length;
+    const low    = agg ? agg.low    : COMPANIES.filter(c => c.riskClass === "low").length;
+    // avgZ aproximat din risk_score (0-100 → Z: 5.0 - score/100*4.5)
+    const avgZ = agg
+      ? +(5.0 - (agg.avg_risk_score / 100) * 4.5).toFixed(2)
+      : (COMPANIES.length > 0 ? +(COMPANIES.reduce((s, c) => s + c.altmanZ, 0) / COMPANIES.length).toFixed(2) : 0);
     const portfolioRevenue = COMPANIES.reduce((s, c) => s + c.revenue, 0);
-    // totalAlerts = alerte din MongoDB (critical + high)
-    const alertCount = syncGet("/api/alerts/count");
+    const alertCount  = syncGet("/api/alerts/count");
     const totalAlerts = alertCount ? (alertCount.critical + alertCount.high) : ALERTS.length;
     return { total, high, medium, low, avgZ, totalAlerts, portfolioRevenue };
   }

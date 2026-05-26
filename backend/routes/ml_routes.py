@@ -114,35 +114,48 @@ async def forecast_company(company_name: str, months: int = 12):
         from backend.ml.predictor import predict_batch
         import math
 
-        # Calculăm scorul de bază din cel mai recent an
-        latest_ind = docs[0]["indicators"]
-        base_score = docs[0].get("risk_score")
+        # Deduplicăm pe an și eliminăm scoruri 0 (nescorated)
+        by_year: dict = {}
+        for d in docs:
+            yr = d["year"]
+            sc = d.get("risk_score") or 0.0
+            # Păstrăm cel mai mare scor per an (evităm 0-urile)
+            if yr not in by_year or sc > by_year[yr][1]:
+                by_year[yr] = (d["indicators"], sc)
+
+        # Sortăm descendent după an
+        sorted_years = sorted(by_year.items(), key=lambda x: x[0], reverse=True)
+
+        # Scor de bază = cel mai recent an valid (>0), sau ML dacă lipsesc
+        base_score = None
+        latest_ind = sorted_years[0][1][0] if sorted_years else docs[0]["indicators"]
+        for _, (ind, sc) in sorted_years:
+            if sc > 0:
+                base_score = sc
+                break
         if base_score is None:
             results = predict_batch([latest_ind])
             base_score = results[0]["risk_score"] if results else 50.0
 
-        # Tendința: diferența medie anuală din istoricul disponibil
-        if len(docs) >= 2:
-            scores = []
-            for d in docs:
-                if d.get("risk_score") is not None:
-                    scores.append(d["risk_score"])
-                else:
-                    r = predict_batch([d["indicators"]])
-                    scores.append(r[0]["risk_score"])
-            if len(scores) >= 2:
-                annual_trend = (scores[-1] - scores[0]) / max(1, len(scores) - 1)
-            else:
-                annual_trend = 0.0
+        # Trend anual din scoruri valide (>0), ordonat cronologic
+        valid = [(yr, sc) for yr, (_, sc) in sorted_years if sc > 0]
+        if len(valid) >= 2:
+            newest_yr, newest_sc = valid[0]
+            oldest_yr, oldest_sc = valid[-1]
+            span = max(1, newest_yr - oldest_yr)
+            annual_trend = (newest_sc - oldest_sc) / span
         else:
             annual_trend = 0.0
 
-        # Proiecție lunară: tendință + zgomot mic deterministic
+        # Proiecție cu amortizare geometrică (trendul scade în timp)
         monthly_trend = annual_trend / 12
+        DAMPING = 0.93
         forecast = []
         v = base_score
         for i in range(months):
-            v = max(0.0, min(100.0, v + monthly_trend + math.sin(i * 0.7) * 0.8))
+            dampened = monthly_trend * (DAMPING ** i)
+            noise    = math.sin(i * 0.7) * 0.5
+            v = max(0.0, min(100.0, v + dampened + noise))
             forecast.append(round(v, 2))
 
         return {"company_name": company_name, "base_score": base_score, "months": months, "forecast": forecast}
