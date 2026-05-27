@@ -78,7 +78,7 @@ OUTPUT_DIR     = Path(__file__).parent
 # URL-uri directe WEB_BL_BS_SL_AN — date reale de pe data.gov.ro (Ministerul Finanțelor)
 #
 # ATENȚIE la convenția MF (contra-intuitivă!):
-#   .csv (482 bytes) = descrierea coloanelor  ← NU vrem asta
+#   .csv (482 bytes) = descrierea coloanelor  ← NU  asta
 #   .txt (9-62 MB)   = datele reale CSV       ← vrem asta
 #
 # Separator în fișier: ";" (punct și virgulă), nu virgulă
