@@ -195,7 +195,17 @@ function buildCssVars(aesthetic, mode, riskPalette, density) {
   const m = t[mode];
   const r = RISK_PALETTES[riskPalette];
   const d = DENSITY_VALUES[density];
+
+  // Sincronizează color-scheme cu modul ales → forțează native UI (select, scrollbar) în temă
+  document.documentElement.style.setProperty("color-scheme", mode === "dark" ? "dark" : "light");
+  // Injectează variabile CSS globale pe :root pentru option elements (care nu moștenesc inline vars)
+  const root = document.documentElement;
+  root.style.setProperty("--sel-bg",  m.bgElev2);
+  root.style.setProperty("--sel-fg",  m.fg);
+  root.style.setProperty("--sel-border", m.border);
+
   return {
+    "colorScheme": mode === "dark" ? "dark" : "light",
     "--bg": m.bg,
     "--bg-elev": m.bgElev,
     "--bg-elev-2": m.bgElev2,

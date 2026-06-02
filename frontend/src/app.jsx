@@ -147,19 +147,26 @@ function App() {
   }
 
   // KPI-uri calculate în funcție de perioadă:
-  // 1Y → index 59 (luna curentă), 3Y → index 24 (acum 3 ani), 5Y → index 0 (acum 5 ani)
+  // high/medium/low = distribuția riscului la START-ul perioadei (arată evoluția față de azi)
+  // avgZ = media Z pe tot intervalul perioadei
   const periodKpis = useMemo(() => {
-    const periodIdx = { "1Y": 59, "3Y": 24, "5Y": 0 }[period];
-    let high = 0, medium = 0, low = 0, zSum = 0;
+    const periodLen = { "1Y": 12, "3Y": 36, "5Y": 60 }[period];
+    const startIdx  = 60 - periodLen;   // 1Y→48, 3Y→24, 5Y→0
+
+    let high = 0, medium = 0, low = 0, zPeriodSum = 0;
     for (const c of COMPANIES) {
-      const z = c.zTrend[periodIdx];
-      zSum += z;
-      if (z < 1.81) high++;
-      else if (z < 2.99) medium++;
+      // clasificare bazată pe Z la START-ul perioadei selectate
+      const zStart = c.zTrend[startIdx];
+      if (zStart < 1.81) high++;
+      else if (zStart < 2.99) medium++;
       else low++;
+
+      // media Z pe tot intervalul
+      const slice = c.zTrend.slice(startIdx);
+      zPeriodSum += slice.reduce((a, b) => a + b, 0) / slice.length;
     }
     const total = COMPANIES.length;
-    const avgZ = total > 0 ? +(zSum / total).toFixed(2) : 0;
+    const avgZ = total > 0 ? +(zPeriodSum / total).toFixed(2) : 0;
     const base = getKPIs();
     return { ...base, high, medium, low, avgZ };
   }, [period]);
@@ -285,7 +292,7 @@ function App() {
                   </div>
                 </Card>
 
-                <Card title="Z-Score mediu · companii monitorizate" sub={`perioadă ${period} · prag distress = 1.81`}>
+                <Card title="Z-Score mediu · companii monitorizate" sub={`medie pe ${period} · ${kpis.avgZ} · prag distress = 1.81`}>
                   {tweaks.trendChart === "line" && (
                     <LineChart
                       series={[
@@ -450,6 +457,8 @@ function App() {
           {view === "compare" && (
             <ComparatorPage period={period} />
           )}
+
+          {view === "crud" && <CRUDPage />}
         </div>
       </main>
 
@@ -489,11 +498,12 @@ function App() {
 // ---------- Sidebar ----------
 function Sidebar({ view, setView, kpis, unreadAlerts }) {
   const items = [
-    { id: "dashboard", label: "Dashboard", icon: "▣" },
-    { id: "stats", label: "Statistici", icon: "◫" },
-    { id: "alerts", label: "Alerte", icon: "△", badge: unreadAlerts > 0 ? unreadAlerts : undefined },
-    { id: "sectors", label: "Sectoare", icon: "≡" },
-    { id: "compare", label: "Comparator", icon: "⇄" },
+    { id: "dashboard",  label: "Dashboard",   icon: "▣" },
+    { id: "stats",      label: "Statistici",  icon: "◫" },
+    { id: "alerts",     label: "Alerte",      icon: "△", badge: unreadAlerts > 0 ? unreadAlerts : undefined },
+    { id: "sectors",    label: "Sectoare",    icon: "≡" },
+    { id: "compare",    label: "Comparator",  icon: "⇄" },
+    { id: "crud",       label: "Gestionare",  icon: "✎" },
   ];
   return (
     <aside className="sidebar">
@@ -647,7 +657,11 @@ function CompaniesTable({ rows, sortKey, sortDir, toggleSort, onClick, onCompare
         <tbody>
           {visibleRows.map(c => {
             const trend = c.zTrend.slice(-36);
-            const rc = window.riskColor(c.riskClass);
+            const rc     = window.riskColor(c.riskClass);
+            // Z-score colorat strict după valoarea Z, independent de eticheta ML
+            const zColor = c.zscore < 1.81 ? "var(--risk-high)" : c.zscore < 2.99 ? "var(--risk-medium)" : "var(--risk-low)";
+            // P12 colorat după praguri de probabilitate
+            const p12Color = c.prob12 > 50 ? "var(--risk-high)" : c.prob12 > 25 ? "var(--risk-medium)" : "var(--risk-low)";
             const selected = compareTickers.includes(c.ticker);
             return (
               <tr key={c.ticker} className={selected ? "tr-selected" : ""}>
@@ -660,10 +674,10 @@ function CompaniesTable({ rows, sortKey, sortDir, toggleSort, onClick, onCompare
                 <td onClick={() => onClick(c)}><span className="co-name">{c.name}</span></td>
                 <td onClick={() => onClick(c)}><span className="sector-tag">{sectors[c.sector]}</span></td>
                 <td className="num" onClick={() => onClick(c)}>
-                  <span style={{ fontWeight: 600, color: rc }}>{c.zscore.toFixed(2)}</span>
+                  <span style={{ fontWeight: 600, color: zColor }}>{c.zscore.toFixed(2)}</span>
                 </td>
                 <td className="num" onClick={() => onClick(c)}>
-                  <span style={{ color: rc, fontWeight: 500 }}>{c.prob12.toFixed(1)}%</span>
+                  <span style={{ color: p12Color, fontWeight: 500 }}>{c.prob12.toFixed(1)}%</span>
                 </td>
                 <td onClick={() => onClick(c)}>
                   <Sparkline data={trend} width={70} height={20} color={rc} />

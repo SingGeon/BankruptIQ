@@ -90,13 +90,23 @@ async def list_companies(
     skip: int = Query(0, ge=0),
     limit: int = Query(500, ge=1, le=5000),
     search: str = Query(""),
+    sector: str = Query(""),
+    risk_label: str = Query(""),
+    sort_by: str = Query("company_name"),
+    sort_dir: int = Query(1),
 ):
     db = get_db()
-    query = {}
+    query: dict = {}
     if search:
         query["company_name"] = {"$regex": search, "$options": "i"}
+    if sector:
+        query["sector"] = sector
+    if risk_label:
+        query["risk_label"] = risk_label
 
-    cursor = db["companies"].find(query).skip(skip).limit(limit).sort("company_name", 1)
+    allowed_sort = {"company_name", "year", "risk_score", "sector"}
+    sort_field = sort_by if sort_by in allowed_sort else "company_name"
+    cursor = db["companies"].find(query).skip(skip).limit(limit).sort(sort_field, sort_dir)
     docs = await cursor.to_list(length=limit)
     return [_doc_to_out(d) for d in docs]
 
@@ -201,6 +211,87 @@ async def predict_company_risk(company_id: str):
     )
     logger.info("Predicție pentru %s: scor=%.2f", doc["company_name"], result["risk_score"])
     return result
+
+
+@router.post("/", response_model=CompanyOut, status_code=201)
+async def create_company(body: dict):
+    from backend.ml.predictor import predict as _predict
+    db = get_db()
+
+    if not body.get("company_name") or not body.get("year") or not body.get("indicators"):
+        raise HTTPException(status_code=400, detail="Câmpuri obligatorii: company_name, year, indicators")
+
+    try:
+        ind_obj = FinancialIndicators(**body["indicators"])
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    try:
+        pred = _predict(ind_obj.model_dump())
+        risk_score = pred["risk_score"]
+        risk_label = pred["risk_label"]
+    except RuntimeError:
+        risk_score = None
+        risk_label = None
+
+    doc = {
+        "company_name": body["company_name"],
+        "year": int(body["year"]),
+        "sector": body.get("sector", "Diverse"),
+        "is_bankrupt": int(body.get("is_bankrupt", 0)),
+        "indicators": ind_obj.model_dump(),
+        "risk_score": risk_score,
+        "risk_label": risk_label,
+        "created_at": datetime.utcnow(),
+    }
+    result = await db["companies"].insert_one(doc)
+    doc["_id"] = result.inserted_id
+    logger.info("Companie creată: %s (%d)", doc["company_name"], doc["year"])
+    return _doc_to_out(doc)
+
+
+@router.put("/{company_id}", response_model=CompanyOut)
+async def update_company(company_id: str, body: dict):
+    from backend.ml.predictor import predict as _predict
+    db = get_db()
+    try:
+        oid = ObjectId(company_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID invalid")
+
+    doc = await db["companies"].find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Compania nu a fost găsită")
+
+    update: dict = {}
+    if "company_name" in body:
+        update["company_name"] = body["company_name"]
+    if "year" in body:
+        update["year"] = int(body["year"])
+    if "sector" in body:
+        update["sector"] = body["sector"]
+    if "is_bankrupt" in body:
+        update["is_bankrupt"] = int(body["is_bankrupt"])
+    if "indicators" in body:
+        try:
+            ind_obj = FinancialIndicators(**body["indicators"])
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        update["indicators"] = ind_obj.model_dump()
+        try:
+            pred = _predict(ind_obj.model_dump())
+            update["risk_score"] = pred["risk_score"]
+            update["risk_label"] = pred["risk_label"]
+        except RuntimeError:
+            pass
+
+    if not update:
+        raise HTTPException(status_code=400, detail="Nicio modificare furnizată")
+
+    await db["companies"].update_one({"_id": oid}, {"$set": update})
+    doc = await db["companies"].find_one({"_id": oid})
+    logger.info("Companie actualizată: %s", doc["company_name"])
+    return _doc_to_out(doc)
 
 
 @router.delete("/{company_id}")

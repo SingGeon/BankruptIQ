@@ -67,7 +67,7 @@ function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, on
           <BigLiveChart value={animZ} trend={activeTrend} threshold={1.81} good={2.99} />
           <div className="hero-z-num">
             <div className="hero-z-label">
-              {selectedCompany ? `Z-SCORE · ${selectedCompany.name.toUpperCase().slice(0, 28)}` : "Z-SCORE MEDIU · COMPANII MONITORIZATE"}
+              {selectedCompany ? `Z-SCORE · ${selectedCompany.name.toUpperCase().slice(0, 28)}` : `Z-SCORE MEDIU · COMPANII MONITORIZATE`}
             </div>
             <div className="hero-z-value">{animZ.toFixed(2)}</div>
             <div className="hero-z-delta">
@@ -152,15 +152,17 @@ function HeroCommandBridge({ kpis, portfolioTrend, period, companies, alerts, on
           </div>
           <div className="hero-watchlist-rows">
             {top3HighRisk.map(c => {
-              const rc = window.riskColor(c.riskClass);
+              const rc  = window.riskColor(c.riskClass);
+              const zc  = window.zColor(c.zscore);
+              const p12c = window.probColor(c.prob12);
               return (
                 <div key={c.ticker} className="hero-wl-row" onClick={() => onClickTicker && onClickTicker(c)}>
-                  <span className="hero-wl-ticker" style={{ borderColor: rc, color: rc }}>{c.ticker}</span>
+                  <span className="hero-wl-ticker" style={{ borderColor: zc, color: zc }}>{c.ticker}</span>
                   <span className="hero-wl-name">{c.name}</span>
-                  <span className="hero-wl-z" style={{ color: rc }}>Z {c.zscore.toFixed(2)}</span>
-                  <span className="hero-wl-prob">P12 {c.prob12.toFixed(1)}%</span>
+                  <span className="hero-wl-z" style={{ color: zc }}>Z {c.zscore.toFixed(2)}</span>
+                  <span className="hero-wl-prob" style={{ color: p12c }}>P12 {c.prob12.toFixed(1)}%</span>
                   <div className="hero-wl-spark">
-                    <Sparkline data={c.zTrend.slice(-24)} width={80} height={20} color={rc} />
+                    <Sparkline data={c.zTrend.slice(-24)} width={80} height={20} color={zc} />
                   </div>
                 </div>
               );

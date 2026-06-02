@@ -50,30 +50,51 @@
   }
 
   function toRiskClass(riskLabel, z) {
-    if (riskLabel === "Risc mare") return "high";
-    if (riskLabel === "Risc mediu") return "medium";
-    if (riskLabel === "Risc mic") return "low";
-    return z < 1.81 ? "high" : z < 2.99 ? "medium" : "low";
+    // Z-score class (ground truth din formula Altman)
+    const zClass  = z < 1.81 ? "high" : z < 2.99 ? "medium" : "low";
+    // ML class din eticheta stocată în MongoDB
+    const mlClass = riskLabel === "Risc mare"  ? "high"
+                  : riskLabel === "Risc mediu" ? "medium"
+                  : riskLabel === "Risc mic"   ? "low"
+                  : zClass;
+    // Returnăm cea mai conservatoare (mai riscantă) dintre cele două
+    const rank = { low: 0, medium: 1, high: 2 };
+    return rank[zClass] >= rank[mlClass] ? zClass : mlClass;
   }
 
   /* ── 60-month Z-score trend ───────────────────────────────────── */
-  // Covers Apr 2021 → Mar 2026 (60 months)
+  // Index 0 = Apr 2021, Index 59 = Mar 2026
+
+  // Ciclu macroeconomic Romania: pandemia 2021 → redresare 2022-2023 → stabilizare 2024 → incertitudine 2025-26
+  // Multiplicator aplicat pe Z-ul de bază al companiei
+  const MACRO_CYCLE = [
+    // 2021 (i 0-11): impact pandemic, credite NPL ridicate
+    0.74, 0.76, 0.78, 0.80, 0.82, 0.84, 0.86, 0.87, 0.88, 0.89, 0.90, 0.91,
+    // 2022 (i 12-23): redresare post-pandemic, inflație în creștere
+    0.92, 0.93, 0.94, 0.95, 0.95, 0.96, 0.96, 0.97, 0.97, 0.96, 0.95, 0.94,
+    // 2023 (i 24-35): creștere economică solidă, dobânzi ridicate
+    0.95, 0.96, 0.97, 0.98, 0.99, 1.00, 1.01, 1.01, 1.02, 1.02, 1.03, 1.03,
+    // 2024 (i 36-47): stabilizare, dobânzi în scădere
+    1.03, 1.04, 1.04, 1.05, 1.05, 1.05, 1.04, 1.04, 1.03, 1.03, 1.02, 1.02,
+    // 2025-26 (i 48-59): incertitudine politică RO, deficit bugetar
+    1.01, 1.00, 0.99, 0.98, 0.98, 0.97, 0.97, 0.96, 0.96, 0.95, 0.95, 0.94,
+  ];
 
   function buildZTrend(annualPts, name) {
     const sorted = [...annualPts].sort((a, b) => a.year - b.year);
     const result = [];
-    const BASE_YEAR = 2021, BASE_MONTH = 3; // April 2021 = index 0
+    const BASE_YEAR = 2021, BASE_MONTH = 3;
 
     for (let i = 0; i < 60; i++) {
       const totalM = BASE_MONTH + i;
       const yr = BASE_YEAR + Math.floor(totalM / 12);
       const fracYr = yr + (totalM % 12) / 12;
 
-      let z;
+      let baseZ;
       if (sorted.length === 0) {
-        z = 2.5;
+        baseZ = 2.5;
       } else if (sorted.length === 1) {
-        z = sorted[0].z;
+        baseZ = sorted[0].z;
       } else {
         let lo = sorted[0], hi = sorted[sorted.length - 1];
         for (let j = 0; j < sorted.length - 1; j++) {
@@ -81,17 +102,19 @@
             lo = sorted[j]; hi = sorted[j + 1]; break;
           }
         }
-        if (fracYr <= lo.year) z = lo.z;
-        else if (fracYr >= hi.year) z = hi.z + (fracYr - hi.year) * 0.015;
+        if (fracYr <= lo.year) baseZ = lo.z;
+        else if (fracYr >= hi.year) baseZ = hi.z;
         else {
           const t = (fracYr - lo.year) / (hi.year - lo.year);
-          z = lo.z + t * (hi.z - lo.z);
+          baseZ = lo.z + t * (hi.z - lo.z);
         }
       }
 
-      const n1 = Math.sin(i * 2.3 + hash(name) * 0.0013) * 0.11;
-      const n2 = Math.cos(i * 1.1 + hash(name + "q") * 0.0009) * 0.055;
-      result.push(+(Math.max(0.05, z + n1 + n2)).toFixed(2));
+      // Aplică ciclul macro + zgomot specific companiei (mai amplu pentru variație vizibilă)
+      const macro = MACRO_CYCLE[i];
+      const n1 = Math.sin(i * 2.3 + hash(name) * 0.0013) * 0.18;
+      const n2 = Math.cos(i * 1.1 + hash(name + "q") * 0.0009) * 0.09;
+      result.push(+(Math.max(0.05, baseZ * macro + n1 + n2)).toFixed(2));
     }
     return result;
   }
@@ -420,6 +443,16 @@
 
   window.riskColor = function (cls) {
     return cls === "high" ? "var(--risk-high)" : cls === "medium" ? "var(--risk-medium)" : "var(--risk-low)";
+  };
+
+  // Culoare bazată strict pe valoarea Z-score (nu pe eticheta ML)
+  window.zColor = function (z) {
+    return z < 1.81 ? "var(--risk-high)" : z < 2.99 ? "var(--risk-medium)" : "var(--risk-low)";
+  };
+
+  // Culoare bazată strict pe probabilitatea de faliment (0-100)
+  window.probColor = function (p) {
+    return p > 50 ? "var(--risk-high)" : p > 25 ? "var(--risk-medium)" : "var(--risk-low)";
   };
 
   window.severityColor = function (sev) {

@@ -396,21 +396,22 @@ function StatsPage({ onSelectCompany }) {
             <span className="num">CURRENT R.</span><span>FLAGS</span>
           </div>
           {topRiskCompanies.map((c, i) => {
-            const rc = window.riskColor(c.riskClass);
+            const zc   = window.zColor(c.zscore);
+            const p12c = window.probColor(c.prob12);
             return (
               <div key={c.ticker} className="rrt-row" onClick={() => onSelectCompany && onSelectCompany(c)}>
                 <span className="rrt-rank">{(i + 1).toString().padStart(2, "0")}</span>
-                <span className="rrt-tk" style={{ color: rc, borderColor: rc }}>{c.ticker}</span>
+                <span className="rrt-tk" style={{ color: zc, borderColor: zc }}>{c.ticker}</span>
                 <span className="rrt-name">{c.name}</span>
                 <span className="rrt-sector">{SECTORS[c.sector] || c.sector}</span>
-                <span className="rrt-num" style={{ color: rc, fontWeight: 700 }}>{c.zscore.toFixed(2)}</span>
-                <span className="rrt-num" style={{ color: rc }}>{c.prob12.toFixed(1)}%</span>
+                <span className="rrt-num" style={{ color: zc, fontWeight: 700 }}>{c.zscore.toFixed(2)}</span>
+                <span className="rrt-num" style={{ color: p12c }}>{c.prob12.toFixed(1)}%</span>
                 <span className="rrt-num" style={{ color: c.roe < 0 ? "var(--risk-high)" : "var(--fg)" }}>{c.roe.toFixed(1)}%</span>
                 <span className="rrt-num" style={{ color: c.leverage > 3 ? "var(--risk-high)" : "var(--fg)" }}>{c.leverage.toFixed(2)}x</span>
                 <span className="rrt-num" style={{ color: c.currentRatio < 1 ? "var(--risk-high)" : "var(--fg)" }}>{c.currentRatio.toFixed(2)}</span>
                 <span className="rrt-flags">
                   {c.flags.length > 0
-                    ? <span className="rrt-flag-pill" style={{ color: rc }}>{c.flags.length}</span>
+                    ? <span className="rrt-flag-pill" style={{ color: zc }}>{c.flags.length}</span>
                     : <span style={{ color: "var(--fg-faint)" }}>—</span>}
                 </span>
               </div>

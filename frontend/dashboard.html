@@ -377,16 +377,35 @@
     .chip.active { background: var(--bg-elev); color: var(--fg); }
     .chip-dot { width: 7px; height: 7px; border-radius: 50%; }
 
+    /* ── Select / dropdown — forțează tema aplicației ─────────────── */
+    select,
     .select {
       padding: 5px 10px;
-      background: var(--bg-elev-2);
-      border: 1px solid var(--border);
+      background: var(--sel-bg, #14171c);
+      border: 1px solid var(--sel-border, #1b1e25);
       border-radius: var(--radius);
       font-size: 11px;
       font-family: var(--font-mono);
-      color: var(--fg);
+      color: var(--sel-fg, #e8e9ee);
       cursor: pointer;
       outline: none;
+      appearance: auto;
+      color-scheme: inherit;
+    }
+    select:focus,
+    .select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 25%, transparent);
+    }
+    /* Opțiunile individuale din dropdown — fallback cu variabile pe :root */
+    select option {
+      background-color: var(--sel-bg, #14171c);
+      color: var(--sel-fg, #e8e9ee);
+    }
+    select option:checked,
+    select option:hover {
+      background-color: var(--accent, #7c8aff);
+      color: #ffffff;
     }
 
     /* ───────────────── Table ───────────────── */
@@ -2402,15 +2421,16 @@
   </script>
 
   <script type="text/babel" src="tweaks-panel.jsx"></script>
-  <script type="text/babel" src="src/theme.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/data.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/charts.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/loading.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/hero.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/globe.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/stats.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/profile.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/compare.jsx?v=1779313196"></script>
-  <script type="text/babel" src="src/app.jsx?v=1779313196"></script>
+  <script type="text/babel" src="src/theme.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/data.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/charts.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/loading.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/hero.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/globe.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/stats.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/profile.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/compare.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/crud.jsx?v=1780422694"></script>
+  <script type="text/babel" src="src/app.jsx?v=1780422694"></script>
 </body>
 </html>
